@@ -21,6 +21,7 @@ export default class Visualization extends Component {
             grid: [],
             mouseIsPressed: false,
             timer: 0,
+            buttonsDisabled: false,
         };
     }
 
@@ -31,7 +32,7 @@ export default class Visualization extends Component {
 
     resetToInitialState() {
         const grid = getInitialGrid();
-        this.setState({grid, timer: 0});
+        this.setState({grid, timer: 0, buttonsDisabled: false});
 
         for (let row = 0; row < grid.length; row++) {
             for (let col = 0; col < grid[0].length; col++) {
@@ -155,6 +156,9 @@ export default class Visualization extends Component {
     }
 
     async visualizeMultipleDijkstra() {
+
+        this.setState({ buttonsDisabled: true });
+
         const promises = [];
         const startTime = Date.now(); // Record the start time
 
@@ -183,6 +187,8 @@ export default class Visualization extends Component {
     }
 
     async visualizeMultipleAStar() {
+        this.setState({ buttonsDisabled: true });
+
         const promises = [];
 
         const startTime = Date.now(); // Record the start time
@@ -207,20 +213,23 @@ export default class Visualization extends Component {
 
 
     render() {
-        const {grid, mouseIsPressed, timer} = this.state;
+        const {grid, mouseIsPressed, timer, buttonsDisabled} = this.state;
 
         return (
             <>
-                <button onClick={() => this.visualizeMultipleDijkstra()}>
+                <button onClick={() => this.visualizeMultipleDijkstra()} disabled={buttonsDisabled}>
                     Visualize Dijkstra's Algorithm
                 </button>
-                <button onClick={() => this.visualizeMultipleAStar()}>
+                <button onClick={() => this.visualizeMultipleAStar()} disabled={buttonsDisabled}>
                     Visualize aStar Algorithm
                 </button>
                 <button onClick={() => this.resetToInitialState()}>
                     Reset Grid and Timer
                 </button>
+
                 <p>Elapsed time: {timer}ms</p>
+
+
                 <div className="grid">
                 </div>
 
