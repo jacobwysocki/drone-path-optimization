@@ -55,6 +55,13 @@
     background-color: red;
 }
 
+.node-shortest-path-removed {
+    background-color: transparent;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+
+
 .node-shortest-path {
     animation-name: shortestPath;
     animation-duration: 1.5s;
@@ -93,14 +100,16 @@
 @keyframes reversedPath {
     0% {
         transform: scale(0.6);
-
+        background-color: blueviolet;
     }
 
     50% {
         transform: scale(1.2);
+        background-color: blueviolet;
     }
 
     100% {
         transform: scale(1);
+        background-color: blueviolet;
     }
 }
