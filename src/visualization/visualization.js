@@ -29,6 +29,21 @@ export default class Visualization extends Component {
         this.setState({grid});
     }
 
+    resetToInitialState() {
+        const grid = getInitialGrid();
+        this.setState({grid, timer: 0});
+
+        for (let row = 0; row < grid.length; row++) {
+            for (let col = 0; col < grid[0].length; col++) {
+                const node = grid[row][col];
+                let className = 'node';
+                if (node.isStart) className = 'node node-start';
+                else if (node.isFinish) className = 'node node-finish';
+                document.getElementById(`node-${node.row}-${node.col}`).className = className;
+            }
+        }
+    }
+
     handleMouseDown(row, col) {
         const node = this.state.grid[row][col];
         if (!node.isStart && !node.isFinish) {
@@ -74,10 +89,10 @@ export default class Visualization extends Component {
 
     animateShortestPath(nodesInShortestPathOrder) {
         return new Promise((resolve) => {
-            const delay = 50;
+            const delay = 100;
             for (let i = 0; i < nodesInShortestPathOrder.length; i++) {
                 const node = nodesInShortestPathOrder[i];
-                if (!node.isStart && !node.isFinish) {
+                if (!node.isStart) {
                     setTimeout(() => {
                         document.getElementById(`node-${node.row}-${node.col}`).className =
                             'node node-shortest-path';
@@ -92,11 +107,12 @@ export default class Visualization extends Component {
                         if (i === nodesInShortestPathOrder.length - 1) {
                             resolve();
                         }
-                    }, delay * i + delay * nodesInShortestPathOrder.length);
+                    }, delay * nodesInShortestPathOrder.length + delay * (nodesInShortestPathOrder.length - i));
                 }
             }
         });
     }
+
 
 
 
@@ -149,7 +165,11 @@ export default class Visualization extends Component {
         Promise.all(promises).then(() => {
             const endTime = Date.now(); // Record the end time
             this.setState({ timer: endTime - startTime }); // Update the timer state
-            this.resetGrid();
+
+            // Delay grid reset
+            setTimeout(() => {
+                this.resetGrid();
+            }, 2000); // Adjust delay as needed
         });
     }
 
@@ -174,7 +194,11 @@ export default class Visualization extends Component {
         Promise.all(promises).then(() => {
             const endTime = Date.now(); // Record the end time
             this.setState({ timer: endTime - startTime }); // Update the timer state
-            this.resetGrid();
+
+            // Delay grid reset
+            setTimeout(() => {
+                this.resetGrid();
+            }, 2000); // Adjust delay as needed
         });
     }
 
@@ -193,9 +217,11 @@ export default class Visualization extends Component {
                 <button onClick={() => this.visualizeMultipleAStar()}>
                     Visualize aStar Algorithm
                 </button>
-                <p>Elapsed time: {timer}ms</p> {/* Display the timer */}
+                <button onClick={() => this.resetToInitialState()}>
+                    Reset Grid and Timer
+                </button>
+                <p>Elapsed time: {timer}ms</p>
                 <div className="grid">
-                    {/* Rest of your code */}
                 </div>
 
                 <div className="grid">

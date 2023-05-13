@@ -24,6 +24,7 @@ const Node = (props) => {
         }
     }, [isShortestPath]);
 
+
     const initialClassName = isFinish
         ? 'node-finish'
         : isStart
