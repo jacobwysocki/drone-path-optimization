@@ -2,6 +2,8 @@
     --start-node: #007bff; /* Blue */
     --finish-node: #28a745; /* Green */
     --default-node: #ccc; /* Dark gray */
+    --shortest-path-node: #c8e8ff; /* Light Blue */
+    --wall-node: #dc3545; /* Red */
 }
 
 body {
@@ -73,7 +75,10 @@ body {
 }
 
 .node-wall {
-    background-color: red;
+    background-color: var(--wall-node);
+    background-image: url('/src/images/warning-icon.png');
+    background-size: cover;
+    background-position: center;
 }
 
 .node-shortest-path-removed {
@@ -91,6 +96,9 @@ body {
     animation-iteration-count: 1;
     animation-fill-mode: forwards;
     animation-play-state: running;
+    background-image: url('/src/images/drone-icon.png');
+    background-size: cover;
+    background-position: center;
 }
 
 .node-reversed-path {
@@ -106,16 +114,16 @@ body {
 @keyframes shortestPath {
     0% {
         transform: scale(0.6);
-        background-color: yellow;
+        background-color: var(--shortest-path-node);
     }
 
     50% {
         transform: scale(1.2);
-        background-color: yellow;  }
+        background-color: var(--shortest-path-node);  }
 
     100% {
         transform: scale(1);
-        background-color: yellow;  }
+        background-color: var(--shortest-path-node);  }
 }
 
 @keyframes reversedPath {

@@ -8,8 +8,8 @@ import './visualization.css';
 const START_NODE_ROW = 5;
 const START_NODE_COL = 7;
 
-const FINISH_NODE_ROW = [10, 1];
-const FINISH_NODE_COL = [10, 15];
+const FINISH_NODE_ROW = [10, 1, 10, 3, 17];
+const FINISH_NODE_COL = [10, 15, 20,17, 3];
 
 
 let shortestPath = [];
@@ -22,6 +22,7 @@ export default class Visualization extends Component {
             mouseIsPressed: false,
             timer: 0,
             buttonsDisabled: false,
+            animationTimer: 0,
         };
     }
 
@@ -40,6 +41,22 @@ export default class Visualization extends Component {
                 let className = 'node';
                 if (node.isStart) className = 'node node-start';
                 else if (node.isFinish) className = 'node node-finish';
+                document.getElementById(`node-${node.row}-${node.col}`).className = className;
+            }
+        }
+    }
+
+    resetWithoutWalls() {
+        const grid = getGridWithoutResettingWalls(this.state.grid);
+        this.setState({grid, timer: 0, buttonsDisabled: false});
+
+        for (let row = 0; row < grid.length; row++) {
+            for (let col = 0; col < grid[0].length; col++) {
+                const node = grid[row][col];
+                let className = 'node';
+                if (node.isStart) className = 'node node-start';
+                else if (node.isFinish) className = 'node node-finish';
+                else if (node.isWall) className = 'node node-wall';
                 document.getElementById(`node-${node.row}-${node.col}`).className = className;
             }
         }
@@ -90,7 +107,7 @@ export default class Visualization extends Component {
 
     animateShortestPath(nodesInShortestPathOrder) {
         return new Promise((resolve) => {
-            const delay = 100;
+            const delay = 200;
             for (let i = 0; i < nodesInShortestPathOrder.length; i++) {
                 const node = nodesInShortestPathOrder[i];
                 if (!node.isStart) {
@@ -113,37 +130,6 @@ export default class Visualization extends Component {
             }
         });
     }
-
-
-
-
-    resetGrid() {
-        const { grid } = this.state;
-        const newGrid = grid.slice();
-
-        for (let row = 0; row < newGrid.length; row++) {
-            for (let col = 0; col < newGrid[row].length; col++) {
-                const node = newGrid[row][col];
-
-                if (!node.isStart && !node.isFinish && !node.isWall) {
-                    const newNode = {
-                        ...node,
-                        isVisited: false,
-                        isShortestPath: false,
-                        distance: Infinity,
-                        previousNode: null,
-                    };
-                    newGrid[row][col] = newNode;
-                    document.getElementById(`node-${row}-${col}`).className = "node";
-                }
-            }
-        }
-
-        this.setState({ grid: newGrid });
-    }
-
-
-
 
 
     async visualizeDijkstra(finishRow, finishCol) {
@@ -169,11 +155,6 @@ export default class Visualization extends Component {
         Promise.all(promises).then(() => {
             const endTime = Date.now(); // Record the end time
             this.setState({ timer: endTime - startTime }); // Update the timer state
-
-            // Delay grid reset
-            setTimeout(() => {
-                this.resetGrid();
-            }, 2000); // Adjust delay as needed
         });
     }
 
@@ -200,20 +181,12 @@ export default class Visualization extends Component {
         Promise.all(promises).then(() => {
             const endTime = Date.now(); // Record the end time
             this.setState({ timer: endTime - startTime }); // Update the timer state
-
-            // Delay grid reset
-            setTimeout(() => {
-                this.resetGrid();
-            }, 2000); // Adjust delay as needed
         });
     }
 
 
-
-
-
     render() {
-        const {grid, mouseIsPressed, timer, buttonsDisabled} = this.state;
+        const {grid, mouseIsPressed, timer, buttonsDisabled, animationTimer} = this.state;
 
         return (
             <>
@@ -227,7 +200,12 @@ export default class Visualization extends Component {
                     Reset Grid and Timer
                 </button>
 
-                <p>Elapsed time: {timer}ms</p>
+                <button onClick={() => this.resetWithoutWalls()}>
+                    Reset Grid and Timer Without Walls
+                </button>
+
+                <p>Time to get to all finish nodes: {timer}ms</p>
+                <p>Animation time: {animationTimer}ms</p>
 
 
                 <div className="grid">
@@ -276,6 +254,25 @@ const getInitialGrid = () => {
         grid.push(currentRow);
     }
     return grid;
+};
+
+const getGridWithoutResettingWalls = (grid) => {
+    const newGrid = [];
+    for (let row = 0; row < grid.length; row++) {
+        const currentRow = [];
+        for (let col = 0; col < grid[0].length; col++) {
+            const node = grid[row][col];
+            currentRow.push({
+                ...node,
+                distance: Infinity,
+                isVisited: false,
+                isShortestPath: false,
+                previousNode: null,
+            });
+        }
+        newGrid.push(currentRow);
+    }
+    return newGrid;
 };
 
 const createNode = (col, row) => {
