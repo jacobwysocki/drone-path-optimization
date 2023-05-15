@@ -10,7 +10,7 @@ export function aStar(grid, startNode, finishNode) {
         sortNodesByDistance(unvisitedNodes, finishNode);
         const closestNode = unvisitedNodes.shift();
         // If we encounter a wall, we skip it.
-        if (closestNode.isWall) continue;
+        if (closestNode.isWall===true || closestNode.isBlocked===true) continue;
         // If the closest node is at a distance of infinity,
         // we must be trapped and should therefore stop.
         if (closestNode.distance === Infinity) {
@@ -97,6 +97,7 @@ export function getNodesInShortestPathOrderaStar(startNode, finishNode, grid) {
     let currentNode = finishNode;
     while (currentNode !== null) {
         nodesInShortestPathOrder.unshift(currentNode);
+        currentNode.isPath = true;
         currentNode = currentNode.previousNode;
 
         const shortestArray = nodesInShortestPathOrder.map(node => [node.row, node.col]);

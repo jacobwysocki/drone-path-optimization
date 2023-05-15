@@ -8,8 +8,8 @@ import './visualization.css';
 const START_NODE_ROW = 5;
 const START_NODE_COL = 7;
 
-const FINISH_NODE_ROW = [10, 1, 10, 3, 17];
-const FINISH_NODE_COL = [10, 15, 20,17, 3];
+const FINISH_NODE_ROW = [1,10, 1, 10, 3, 17];
+const FINISH_NODE_COL = [1,10, 15, 35,40, 49];
 
 
 let shortestPath = [];
@@ -107,7 +107,7 @@ export default class Visualization extends Component {
 
     animateShortestPath(nodesInShortestPathOrder) {
         return new Promise((resolve) => {
-            const delay = 200;
+            const delay = 100;
             for (let i = 0; i < nodesInShortestPathOrder.length; i++) {
                 const node = nodesInShortestPathOrder[i];
                 if (!node.isStart) {
@@ -142,21 +142,52 @@ export default class Visualization extends Component {
     }
 
     async visualizeMultipleDijkstra() {
-
         this.setState({ buttonsDisabled: true });
-
-        const promises = [];
         const startTime = Date.now(); // Record the start time
 
         for (let index = 0; index < FINISH_NODE_ROW.length; index++) {
-            promises.push(this.visualizeDijkstra(FINISH_NODE_ROW[index], FINISH_NODE_COL[index]));
+            // Visualize the path and wait for it to finish before starting a new one
+            await this.visualizeDijkstra(FINISH_NODE_ROW[index], FINISH_NODE_COL[index]);
+
+            // After the path has been visualized, we block all the nodes in the path
+            // and schedule them to be freed after a certain delay
+
+            //do it on the shortestpath of the drone
+            for (let row = 0; row < this.state.grid.length; row++) {
+                for (let col = 0; col < this.state.grid[0].length; col++) {
+                    const node = this.state.grid[row][col];
+                    if (node.isPath) {
+                        node.isBlocked = true;
+                        setTimeout(() => {
+                            node.isBlocked = false;
+                        }, 2000); // Replace 2000 with your desired delay
+                    }
+                }
+            }
+            // Here we reset the grid state after the nodes are unblocked
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for the nodes to be unblocked
+
+            //do not call the reset, try to working out the erase. Issues with multithreaded code
+            this.resetGrid();
         }
 
-        Promise.all(promises).then(() => {
-            const endTime = Date.now(); // Record the end time
-            this.setState({ timer: endTime - startTime }); // Update the timer state
-        });
+        const endTime = Date.now(); // Record the end time
+        this.setState({ timer: endTime - startTime, buttonsDisabled: false }); // Update the timer state and re-enable buttons
     }
+
+    resetGrid() {
+        const grid = this.state.grid;
+        for (let row = 0; row < grid.length; row++) {
+            for (let col = 0; col < grid[0].length; col++) {
+                const node = grid[row][col];
+                node.isVisited = false;
+                node.distance = Infinity;
+                node.previousNode = null;
+            }
+        }
+        this.setState({ grid });
+    }
+
 
     async visualizeAStar(finishRow, finishCol) {
         const { grid } = this.state;
@@ -169,19 +200,33 @@ export default class Visualization extends Component {
 
     async visualizeMultipleAStar() {
         this.setState({ buttonsDisabled: true });
-
-        const promises = [];
-
         const startTime = Date.now(); // Record the start time
 
         for (let index = 0; index < FINISH_NODE_ROW.length; index++) {
-            promises.push(this.visualizeAStar(FINISH_NODE_ROW[index], FINISH_NODE_COL[index]));
+            // Visualize the path and wait for it to finish before starting a new one
+            await this.visualizeAStar(FINISH_NODE_ROW[index], FINISH_NODE_COL[index]);
+
+            // After the path has been visualized, we block all the nodes in the path
+            // and schedule them to be freed after a certain delay
+            for (let row = 0; row < this.state.grid.length; row++) {
+                for (let col = 0; col < this.state.grid[0].length; col++) {
+                    const node = this.state.grid[row][col];
+                    if (node.isPath) {
+                        node.isBlocked = true;
+                        console.log(node)
+                        setTimeout(() => {
+                            node.isBlocked = false;
+                        }, 2000); // Replace 2000 with your desired delay
+                    }
+                }
+            }
+            // Here we reset the grid state after the nodes are unblocked
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for the nodes to be unblocked
+            this.resetGrid();
         }
 
-        Promise.all(promises).then(() => {
-            const endTime = Date.now(); // Record the end time
-            this.setState({ timer: endTime - startTime }); // Update the timer state
-        });
+        const endTime = Date.now(); // Record the end time
+        this.setState({ timer: endTime - startTime, buttonsDisabled: false }); // Update the timer state and re-enable buttons
     }
 
 
@@ -246,9 +291,9 @@ export default class Visualization extends Component {
 
 const getInitialGrid = () => {
     const grid = [];
-    for (let row = 0; row < 25; row++) {
+    for (let row = 0; row < 20; row++) {
         const currentRow = [];
-        for (let col = 0; col < 25; col++) {
+        for (let col = 0; col < 50; col++) {
             currentRow.push(createNode(col, row));
         }
         grid.push(currentRow);
@@ -287,12 +332,13 @@ const createNode = (col, row) => {
         col,
         row,
         isStart: row === START_NODE_ROW && col === START_NODE_COL,
-        isFinish,
+        isFinish: isFinish,
         distance: Infinity,
         isVisited: false,
         isWall: false,
-        isShortestPath: false,
         previousNode: null,
+        isPath: false, // New property to track if node is part of a path
+        isBlocked: false // New property to track if node is currently blocked
     };
 };
 
