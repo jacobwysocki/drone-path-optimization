@@ -72,11 +72,6 @@ export function getNodesInShortestPathOrderaStar(startNode, finishNode, grid) {
         const newNode = getNewGridWithNodesFromShortestPathDisappear(grid, t[0][0], t[0][1]);
         console.log("path",newNode);
     }
-    //console.log(shortestArray);
-
-    // Destructure each element of shortestArray to separate variables
-
-
 
     console.log("nodesInShortestPathOrder", nodesInShortestPathOrder);
     return nodesInShortestPathOrder;

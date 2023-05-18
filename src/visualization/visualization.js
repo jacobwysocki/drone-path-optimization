@@ -11,9 +11,6 @@ const startNodeCol = 7;
 const finishNodeRow = [1, 1,10, 1, 10, 3, 17];
 const finishNodeCol = [1,2,10, 15, 35,40, 49];
 
-
-let shortestPath = [];
-
 export default class Visualization extends Component {
     constructor() {
         super();
@@ -115,12 +112,10 @@ export default class Visualization extends Component {
                             'node node-shortest-path';
                     }, delay * i);
 
-                    // Make the node disappear
                     setTimeout(() => {
                         document.getElementById(`node-${node.row}-${node.col}`).className =
                             'node';
 
-                        // Resolve the promise after the last node disappears
                         if (i === nodesInShortestPathOrder.length - 1) {
                             resolve();
                         }
@@ -140,18 +135,13 @@ export default class Visualization extends Component {
         return this.animatePathfindingAlgorithm(visitedNodesInOrder, nodesInShortestPathOrder);
     }
 
-    async visualizeMultipleDijkstra() {
+    async visualizeMultipleDijkstraOneByOne() {
         this.setState({ buttonsDisabled: true });
-        const startTime = Date.now(); // Record the start time
+        const startTime = Date.now();
 
         for (let index = 0; index < finishNodeRow.length; index++) {
-            // Visualize the path and wait for it to finish before starting a new one
             await this.visualizeDijkstra(finishNodeRow[index], finishNodeCol[index]);
 
-            // After the path has been visualized, we block all the nodes in the path
-            // and schedule them to be freed after a certain delay
-
-            //do it on the shortestpath of the drone
             for (let row = 0; row < this.state.grid.length; row++) {
                 for (let col = 0; col < this.state.grid[0].length; col++) {
                     const node = this.state.grid[row][col];
@@ -159,20 +149,51 @@ export default class Visualization extends Component {
                         node.isBlocked = true;
                         setTimeout(() => {
                             node.isBlocked = false;
-                        }, 0); // Replace 2000 with your desired delay
+                        }, 2000);
                     }
                 }
             }
-            // Here we reset the grid state after the nodes are unblocked
-            await new Promise(resolve => setTimeout(resolve, 0)); // Wait for the nodes to be unblocked
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
-            //do not call the reset, try to working out the erase. Issues with multithreaded code
             this.resetGrid();
         }
 
         const endTime = Date.now(); // Record the end time
-        this.setState({ timer: endTime - startTime, buttonsDisabled: false }); // Update the timer state and re-enable buttons
+        this.setState({ timer: endTime - startTime, buttonsDisabled: false });
     }
+
+    async visualizeMultipleDijkstraAllAtOnce() {
+        this.setState({ buttonsDisabled: true });
+        const startTime = Date.now();
+        const promises = [];
+
+        for (let index = 0; index < finishNodeRow.length; index++) {
+            promises.push(this.visualizeDijkstra(finishNodeRow[index], finishNodeCol[index]));
+        }
+
+
+        await Promise.all(promises);
+
+        for (let row = 0; row < this.state.grid.length; row++) {
+            for (let col = 0; col < this.state.grid[0].length; col++) {
+                const node = this.state.grid[row][col];
+                if (node.isPath) {
+                    node.isBlocked = true;
+                    setTimeout(() => {
+                        node.isBlocked = false;
+                    }, 2000);
+                }
+            }
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        this.resetGrid();
+
+        const endTime = Date.now();
+        this.setState({ timer: endTime - startTime, buttonsDisabled: false });
+    }
+
+
 
     resetGrid() {
         const grid = this.state.grid;
@@ -197,7 +218,7 @@ export default class Visualization extends Component {
         return this.animatePathfindingAlgorithm(visitedNodesInOrder, nodesInShortestPathOrder);
     }
 
-    async visualizeMultipleAStar() {
+    async visualizeMultipleAStarOneByOne() {
         this.setState({ buttonsDisabled: true });
         const startTime = Date.now(); // Record the start time
 
@@ -212,21 +233,58 @@ export default class Visualization extends Component {
                     const node = this.state.grid[row][col];
                     if (node.isPath) {
                         node.isBlocked = true;
-                        console.log(node)
+
                         setTimeout(() => {
                             node.isBlocked = false;
-                        }, 0); // Replace 2000 with your desired delay
+                        }, 2000); // Replace 2000 with your desired delay
                     }
                 }
             }
             // Here we reset the grid state after the nodes are unblocked
-            await new Promise(resolve => setTimeout(resolve, 0)); // Wait for the nodes to be unblocked
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for the nodes to be unblocked
             this.resetGrid();
         }
 
         const endTime = Date.now(); // Record the end time
         this.setState({ timer: endTime - startTime, buttonsDisabled: false }); // Update the timer state and re-enable buttons
     }
+
+    async visualizeMultipleAStarAllAtOnce() {
+        this.setState({ buttonsDisabled: true });
+        const startTime = Date.now(); // Record the start time
+        const promises = [];
+
+        for (let index = 0; index < finishNodeRow.length; index++) {
+            // Visualize the path for each finish node and add the promise to the array
+            promises.push(this.visualizeAStar(finishNodeRow[index], finishNodeCol[index]));
+        }
+
+        // Wait for all paths to finish
+        await Promise.all(promises);
+
+        // After all paths have been visualized, we block all the nodes in the paths
+        // and schedule them to be freed after a certain delay
+        for (let row = 0; row < this.state.grid.length; row++) {
+            for (let col = 0; col < this.state.grid[0].length; col++) {
+                const node = this.state.grid[row][col];
+                if (node.isPath) {
+                    node.isBlocked = true;
+
+                    setTimeout(() => {
+                        node.isBlocked = false;
+                    }, 2000); // Replace 2000 with your desired delay
+                }
+            }
+        }
+
+        // Here we reset the grid state after the nodes are unblocked
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for the nodes to be unblocked
+        this.resetGrid();
+
+        const endTime = Date.now(); // Record the end time
+        this.setState({ timer: endTime - startTime, buttonsDisabled: false }); // Update the timer state and re-enable buttons
+    }
+
 
 
     render() {
@@ -235,12 +293,20 @@ export default class Visualization extends Component {
         return (
             <>
                 <br/>
-                <Button variant="primary" className="buttonStyle" onClick={() => this.visualizeMultipleDijkstra()} disabled={buttonsDisabled}>
+                <Button variant="primary" className="buttonStyle" onClick={() => this.visualizeMultipleDijkstraOneByOne()} disabled={buttonsDisabled}>
                     Visualize Dijkstra's Algorithm
                 </Button>
-                <Button variant="primary" className="buttonStyle"  onClick={() => this.visualizeMultipleAStar()} disabled={buttonsDisabled}>
+                <Button variant="primary" className="buttonStyle" onClick={() => this.visualizeMultipleDijkstraAllAtOnce()} disabled={buttonsDisabled}>
+                    Visualize Dijkstra's Algorithm with all nodes at once
+                </Button>
+                <Button variant="primary" className="buttonStyle" onClick={() => this.visualizeMultipleAStarOneByOne()} disabled={buttonsDisabled}>
                     Visualize aStar Algorithm
                 </Button>
+
+                <Button variant="primary" className="buttonStyle" onClick={() => this.visualizeMultipleAStarAllAtOnce()} disabled={buttonsDisabled}>
+                    Visualize aStar Algorithm with all nodes at once
+                </Button>
+                <br/>
                 <Button variant="danger" className="buttonStyle" onClick={() => this.resetToInitialState()}>
                     Reset Grid and Timer
                 </Button>

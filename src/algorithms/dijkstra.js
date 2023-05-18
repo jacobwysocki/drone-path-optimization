@@ -66,12 +66,6 @@ function getAllNodes(grid) {
 // Backtracks from the finishNode to find the shortest path.
 // Only works when called *after* the dijkstra method above.
 
-function someFunction(row, col) {
-    // Do something with the row and col values
-    // Return some result
-    //console.log(row, col);
-    return [row, col];
-}
 
 export const getNewGridWithNodesFromShortestPathDisappear = (grid, row, col) => {
     if (row !== undefined && col !== undefined && grid !== undefined) {
@@ -98,6 +92,14 @@ export function getNodesInShortestPathOrder(startNode, finishNode, grid) {
         currentNode.isPath = true;
         nodesInShortestPathOrder.unshift(currentNode);
         currentNode = currentNode.previousNode;
+
+        const shortestArray = nodesInShortestPathOrder.map(node => [node.row, node.col]);
+        const t = shortestArray.map(([row, col]) => {
+            return (row, col); //
+        });
+        const newNode = getNewGridWithNodesFromShortestPathDisappear(grid, t[0][0], t[0][1]);
+        console.log("path",newNode);
     }
+    console.log("nodesInShortestPathOrder", nodesInShortestPathOrder);
     return nodesInShortestPathOrder;
 }
