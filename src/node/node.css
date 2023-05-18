@@ -1,7 +1,7 @@
 :root {
     --start-node: #007bff; /* Blue */
     --finish-node: #28a745; /* Green */
-    --default-node: #ccc; /* Dark gray */
+    --default-node: #b4b4b4; /* Dark gray */
     --shortest-path-node: #c8e8ff; /* Light Blue */
     --wall-node: #dc3545; /* Red */
 }
@@ -51,26 +51,27 @@ body {
 @keyframes visitedAnimation {
     0% {
         transform: scale(0.1);
-        background-color: rgb(175, 225, 175);
+        background-color: rgb(96, 41, 255);
+        border-radius: 50%;
     }
 
     25% {
         transform: scale(0.5);
-        background-color: rgb(80, 200, 120);
+        background-color: rgb(119, 75, 255);
     }
 
     50% {
-        background-color: rgb(79, 121, 66);
+        background-color: rgb(161, 128, 255);
     }
 
     75% {
-        transform: scale(0.8);
-        background-color: rgb(53, 94, 59);
+        transform: scale(1.1);
+        background-color: rgb(197, 176, 255);
     }
 
     100% {
         transform: scale(1);
-        background-color: rgb(175, 225, 175);
+        background-color: rgb(193, 172, 255);
     }
 }
 

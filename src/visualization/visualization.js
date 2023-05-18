@@ -1,15 +1,15 @@
 import React, {Component} from 'react';
-import Node from './node/node';
+import Node from '../node/node';
 import {dijkstra, getNodesInShortestPathOrder} from '../algorithms/dijkstra';
 import {aStar, getNodesInShortestPathOrderaStar} from '../algorithms/aStar';
-
+import Button from 'react-bootstrap/Button';
 import './visualization.css';
 
-const START_NODE_ROW = 5;
-const START_NODE_COL = 7;
+const startNodeRow = 5;
+const startNodeCol = 7;
 
-const FINISH_NODE_ROW = [1,10, 1, 10, 3, 17];
-const FINISH_NODE_COL = [1,10, 15, 35,40, 49];
+const finishNodeRow = [1, 1,10, 1, 10, 3, 17];
+const finishNodeCol = [1,2,10, 15, 35,40, 49];
 
 
 let shortestPath = [];
@@ -22,7 +22,6 @@ export default class Visualization extends Component {
             mouseIsPressed: false,
             timer: 0,
             buttonsDisabled: false,
-            animationTimer: 0,
         };
     }
 
@@ -83,7 +82,7 @@ export default class Visualization extends Component {
         this.setState({mouseIsPressed: false});
     }
 
-    animateDijkstra(visitedNodesInOrder, nodesInShortestPathOrder) {
+    animatePathfindingAlgorithm(visitedNodesInOrder, nodesInShortestPathOrder) {
         return new Promise((resolve) => {
             for (let i = 0; i <= visitedNodesInOrder.length; i++) {
                 if (i === visitedNodesInOrder.length) {
@@ -91,7 +90,7 @@ export default class Visualization extends Component {
                         this.animateShortestPath(nodesInShortestPathOrder).then(() => {
                             resolve();
                         });
-                    }, 10 * i);
+                    }, 5 * i);
                     return;
                 }
                 setTimeout(() => {
@@ -100,7 +99,7 @@ export default class Visualization extends Component {
                         document.getElementById(`node-${node.row}-${node.col}`).className =
                             'node node-visited';
                     }
-                }, 10 * i);
+                }, 5 * i);
             }
         });
     }
@@ -134,20 +133,20 @@ export default class Visualization extends Component {
 
     async visualizeDijkstra(finishRow, finishCol) {
         const { grid } = this.state;
-        const startNode = grid[START_NODE_ROW][START_NODE_COL];
+        const startNode = grid[startNodeRow][startNodeCol];
         const finishNode = grid[finishRow][finishCol];
         const visitedNodesInOrder = dijkstra(grid, startNode, finishNode);
         const nodesInShortestPathOrder = getNodesInShortestPathOrder(startNode, finishNode, grid);
-        return this.animateDijkstra(visitedNodesInOrder, nodesInShortestPathOrder);
+        return this.animatePathfindingAlgorithm(visitedNodesInOrder, nodesInShortestPathOrder);
     }
 
     async visualizeMultipleDijkstra() {
         this.setState({ buttonsDisabled: true });
         const startTime = Date.now(); // Record the start time
 
-        for (let index = 0; index < FINISH_NODE_ROW.length; index++) {
+        for (let index = 0; index < finishNodeRow.length; index++) {
             // Visualize the path and wait for it to finish before starting a new one
-            await this.visualizeDijkstra(FINISH_NODE_ROW[index], FINISH_NODE_COL[index]);
+            await this.visualizeDijkstra(finishNodeRow[index], finishNodeCol[index]);
 
             // After the path has been visualized, we block all the nodes in the path
             // and schedule them to be freed after a certain delay
@@ -160,12 +159,12 @@ export default class Visualization extends Component {
                         node.isBlocked = true;
                         setTimeout(() => {
                             node.isBlocked = false;
-                        }, 2000); // Replace 2000 with your desired delay
+                        }, 0); // Replace 2000 with your desired delay
                     }
                 }
             }
             // Here we reset the grid state after the nodes are unblocked
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for the nodes to be unblocked
+            await new Promise(resolve => setTimeout(resolve, 0)); // Wait for the nodes to be unblocked
 
             //do not call the reset, try to working out the erase. Issues with multithreaded code
             this.resetGrid();
@@ -191,20 +190,20 @@ export default class Visualization extends Component {
 
     async visualizeAStar(finishRow, finishCol) {
         const { grid } = this.state;
-        const startNode = grid[START_NODE_ROW][START_NODE_COL];
+        const startNode = grid[startNodeRow][startNodeCol];
         const finishNode = grid[finishRow][finishCol];
         const visitedNodesInOrder = aStar(grid, startNode, finishNode);
         const nodesInShortestPathOrder = getNodesInShortestPathOrderaStar(startNode, finishNode, grid);
-        return this.animateDijkstra(visitedNodesInOrder, nodesInShortestPathOrder);
+        return this.animatePathfindingAlgorithm(visitedNodesInOrder, nodesInShortestPathOrder);
     }
 
     async visualizeMultipleAStar() {
         this.setState({ buttonsDisabled: true });
         const startTime = Date.now(); // Record the start time
 
-        for (let index = 0; index < FINISH_NODE_ROW.length; index++) {
+        for (let index = 0; index < finishNodeRow.length; index++) {
             // Visualize the path and wait for it to finish before starting a new one
-            await this.visualizeAStar(FINISH_NODE_ROW[index], FINISH_NODE_COL[index]);
+            await this.visualizeAStar(finishNodeRow[index], finishNodeCol[index]);
 
             // After the path has been visualized, we block all the nodes in the path
             // and schedule them to be freed after a certain delay
@@ -216,12 +215,12 @@ export default class Visualization extends Component {
                         console.log(node)
                         setTimeout(() => {
                             node.isBlocked = false;
-                        }, 2000); // Replace 2000 with your desired delay
+                        }, 0); // Replace 2000 with your desired delay
                     }
                 }
             }
             // Here we reset the grid state after the nodes are unblocked
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for the nodes to be unblocked
+            await new Promise(resolve => setTimeout(resolve, 0)); // Wait for the nodes to be unblocked
             this.resetGrid();
         }
 
@@ -231,27 +230,26 @@ export default class Visualization extends Component {
 
 
     render() {
-        const {grid, mouseIsPressed, timer, buttonsDisabled, animationTimer} = this.state;
+        const {grid, mouseIsPressed, timer, buttonsDisabled} = this.state;
 
         return (
             <>
-                <button onClick={() => this.visualizeMultipleDijkstra()} disabled={buttonsDisabled}>
+                <br/>
+                <Button variant="primary" className="buttonStyle" onClick={() => this.visualizeMultipleDijkstra()} disabled={buttonsDisabled}>
                     Visualize Dijkstra's Algorithm
-                </button>
-                <button onClick={() => this.visualizeMultipleAStar()} disabled={buttonsDisabled}>
+                </Button>
+                <Button variant="primary" className="buttonStyle"  onClick={() => this.visualizeMultipleAStar()} disabled={buttonsDisabled}>
                     Visualize aStar Algorithm
-                </button>
-                <button onClick={() => this.resetToInitialState()}>
+                </Button>
+                <Button variant="danger" className="buttonStyle" onClick={() => this.resetToInitialState()}>
                     Reset Grid and Timer
-                </button>
+                </Button>
 
-                <button onClick={() => this.resetWithoutWalls()}>
+                <Button variant="danger" className="buttonStyle" onClick={() => this.resetWithoutWalls()}>
                     Reset Grid and Timer Without Walls
-                </button>
+                </Button>
 
-                <p>Time to get to all finish nodes: {timer}ms</p>
-                <p>Animation time: {animationTimer}ms</p>
-
+                <p className="timerStyle" >Time to get to all finish nodes: {timer}ms</p>
 
                 <div className="grid">
                 </div>
@@ -322,8 +320,8 @@ const getGridWithoutResettingWalls = (grid) => {
 
 const createNode = (col, row) => {
     let isFinish = false;
-    for (let i = 0; i < FINISH_NODE_ROW.length; i++) {
-        if (row === FINISH_NODE_ROW[i] && col === FINISH_NODE_COL[i]) {
+    for (let i = 0; i < finishNodeRow.length; i++) {
+        if (row === finishNodeRow[i] && col === finishNodeCol[i]) {
             isFinish = true;
             break;
         }
@@ -331,7 +329,7 @@ const createNode = (col, row) => {
     return {
         col,
         row,
-        isStart: row === START_NODE_ROW && col === START_NODE_COL,
+        isStart: row === startNodeRow && col === startNodeCol,
         isFinish: isFinish,
         distance: Infinity,
         isVisited: false,
