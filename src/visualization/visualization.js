@@ -5,11 +5,17 @@ import {aStar, getNodesInShortestPathOrderaStar} from '../algorithms/aStar';
 import Button from 'react-bootstrap/Button';
 import './visualization.css';
 
-const startNodeRow = 5;
+const startNodeRow = 6;
 const startNodeCol = 7;
 
-const finishNodeRow = [1, 1,10, 1, 10, 3, 17];
-const finishNodeCol = [1,2,10, 15, 35,40, 49];
+const finishNodeRow = [0, 2,10, 1, 10,17, 3];
+const finishNodeCol = [1,2,10, 15, 35,20, 17];
+
+//const finishNodeRow = [10];
+//const finishNodeCol = [10];
+
+//const finishNodeRow = [1, 1,10, 1, 10, 3, 17, 23,13, 5, 9];
+//const finishNodeCol = [1,2,10, 15, 35,40, 49,43, 13, 44, 9];
 
 export default class Visualization extends Component {
     constructor() {
@@ -162,6 +168,43 @@ export default class Visualization extends Component {
         this.setState({ timer: endTime - startTime, buttonsDisabled: false });
     }
 
+    /*
+    async visualizeMultipleDijkstraOneByOne() {
+        this.setState({ buttonsDisabled: true });
+        const startTime = Date.now();
+
+        for (let index = 0; index < finishNodeRow.length; index += 6) {
+            let promises = [];
+            for (let offset = 0; offset < 6; offset++) {
+                if(index + offset < finishNodeRow.length){
+                    promises.push(this.visualizeDijkstra(finishNodeRow[index + offset], finishNodeCol[index + offset]));
+                }
+            }
+
+            await Promise.all(promises);
+
+            for (let row = 0; row < this.state.grid.length; row++) {
+                for (let col = 0; col < this.state.grid[0].length; col++) {
+                    const node = this.state.grid[row][col];
+                    if (node.isPath) {
+                        node.isBlocked = true;
+                        setTimeout(() => {
+                            node.isBlocked = false;
+                        }, 2000);
+                    }
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            this.resetGrid();
+        }
+
+        const endTime = Date.now(); // Record the end time
+        this.setState({ timer: endTime - startTime, buttonsDisabled: false });
+    }
+
+     */
+
     async visualizeMultipleDijkstraAllAtOnce() {
         this.setState({ buttonsDisabled: true });
         const startTime = Date.now();
@@ -220,14 +263,11 @@ export default class Visualization extends Component {
 
     async visualizeMultipleAStarOneByOne() {
         this.setState({ buttonsDisabled: true });
-        const startTime = Date.now(); // Record the start time
+        const startTime = Date.now();
 
         for (let index = 0; index < finishNodeRow.length; index++) {
-            // Visualize the path and wait for it to finish before starting a new one
             await this.visualizeAStar(finishNodeRow[index], finishNodeCol[index]);
 
-            // After the path has been visualized, we block all the nodes in the path
-            // and schedule them to be freed after a certain delay
             for (let row = 0; row < this.state.grid.length; row++) {
                 for (let col = 0; col < this.state.grid[0].length; col++) {
                     const node = this.state.grid[row][col];
@@ -236,34 +276,29 @@ export default class Visualization extends Component {
 
                         setTimeout(() => {
                             node.isBlocked = false;
-                        }, 2000); // Replace 2000 with your desired delay
+                        }, 2000);
                     }
                 }
             }
-            // Here we reset the grid state after the nodes are unblocked
             await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for the nodes to be unblocked
             this.resetGrid();
         }
 
-        const endTime = Date.now(); // Record the end time
+        const endTime = Date.now();
         this.setState({ timer: endTime - startTime, buttonsDisabled: false }); // Update the timer state and re-enable buttons
     }
 
     async visualizeMultipleAStarAllAtOnce() {
         this.setState({ buttonsDisabled: true });
-        const startTime = Date.now(); // Record the start time
+        const startTime = Date.now();
         const promises = [];
 
         for (let index = 0; index < finishNodeRow.length; index++) {
-            // Visualize the path for each finish node and add the promise to the array
             promises.push(this.visualizeAStar(finishNodeRow[index], finishNodeCol[index]));
         }
 
-        // Wait for all paths to finish
         await Promise.all(promises);
 
-        // After all paths have been visualized, we block all the nodes in the paths
-        // and schedule them to be freed after a certain delay
         for (let row = 0; row < this.state.grid.length; row++) {
             for (let col = 0; col < this.state.grid[0].length; col++) {
                 const node = this.state.grid[row][col];
@@ -272,16 +307,15 @@ export default class Visualization extends Component {
 
                     setTimeout(() => {
                         node.isBlocked = false;
-                    }, 2000); // Replace 2000 with your desired delay
+                    }, 2000);
                 }
             }
         }
 
-        // Here we reset the grid state after the nodes are unblocked
         await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for the nodes to be unblocked
         this.resetGrid();
 
-        const endTime = Date.now(); // Record the end time
+        const endTime = Date.now();
         this.setState({ timer: endTime - startTime, buttonsDisabled: false }); // Update the timer state and re-enable buttons
     }
 
@@ -401,8 +435,8 @@ const createNode = (col, row) => {
         isVisited: false,
         isWall: false,
         previousNode: null,
-        isPath: false, // New property to track if node is part of a path
-        isBlocked: false // New property to track if node is currently blocked
+        isPath: false,
+        isBlocked: false
     };
 };
 
@@ -414,7 +448,6 @@ const getNewGridWithWallToggled = (grid, row, col) => {
         isWall: !node.isWall,
     };
     newGrid[row][col] = newNode;
-    //console.log(newGrid);
     console.log(newNode);
     return newGrid;
 

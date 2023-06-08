@@ -1,9 +1,9 @@
 :root {
-    --start-node: #007bff; /* Blue */
-    --finish-node: #28a745; /* Green */
-    --default-node: #b4b4b4; /* Dark gray */
-    --shortest-path-node: #c8e8ff; /* Light Blue */
-    --wall-node: #dc3545; /* Red */
+    --start-node: #007bff;
+    --finish-node: #28a745;
+    --default-node: #b4b4b4;
+    --shortest-path-node: #c8e8ff;
+    --wall-node: #dc3545;
 }
 
 body {

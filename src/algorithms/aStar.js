@@ -1,11 +1,4 @@
-// Performs Dijkstra's algorithm; returns *all* nodes in the order
-// in which they were visited. Also makes nodes point back to their
-// previous node, effectively allowing us to compute the shortest path
-// by backtracking from the finish node.
-
 import {getAllNodes, updateUnvisitedNeighbors} from './algorithm';
-
-// Use these imported functions in your code.
 
 export function aStar(grid, startNode, finishNode) {
     const visitedNodesInOrder = [];
@@ -14,10 +7,7 @@ export function aStar(grid, startNode, finishNode) {
     while (unvisitedNodes.length) {
         sortNodesByDistance(unvisitedNodes, finishNode);
         const closestNode = unvisitedNodes.shift();
-        // If we encounter a wall, we skip it.
         if (closestNode.isWall===true || closestNode.isBlocked===true) continue;
-        // If the closest node is at a distance of infinity,
-        // we must be trapped and should therefore stop.
         if (closestNode.distance === Infinity) {
             setTimeout(function() {
                 window.alert("No path found!");

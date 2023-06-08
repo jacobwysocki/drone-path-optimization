@@ -1,3 +1,10 @@
+# Simulation can be accessed through [Newnumyspace](http://unn-w19018803.newnumyspace.co.uk/KV6003/dronePathfinding/)
+
+URL: http://unn-w19018803.newnumyspace.co.uk/KV6003/dronePathfinding/
+
+# To run the simulation firstly run the install command  
+### `npm install`
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
