@@ -1,6 +1,6 @@
-import React, { Component, useState, useRef, useEffect } from 'react';
+import React, { Component, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Box, Sphere, Line, Text, Stars, Instance, Instances, Grid, Html } from '@react-three/drei';
+import { OrbitControls, Box, Sphere, Cylinder, Line, Stars, Grid, Html } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 
@@ -35,20 +35,45 @@ const getInitialGrid = () => {
 };
 
 const createNode = (col, row) => {
+    // City Grid Logic: Every 6th row/col is a main road
+    const isRoad = (row % 6 === 0) || (col % 6 === 0);
+    const buildingHeight = isRoad ? 0 : 2 + Math.random() * 4;
+
     return {
         col,
         row,
         z: 0,
         isStart: row === startNodeRow && col === startNodeCol,
-        isFinish: false, // Initially false, will be set randomly
+        isFinish: false,
         distance: Infinity,
         isVisited: false,
         isWall: false,
         previousNode: null,
         isPath: false,
-        isBlocked: false
+        isBlocked: false,
+        isRoad: isRoad,
+        wallHeight: buildingHeight
     };
 };
+
+function Rotor({ position, color, speed = 0.5 }) {
+    const rotorRef = useRef();
+    useFrame((state) => {
+        if (rotorRef.current) {
+            rotorRef.current.rotation.y += speed;
+        }
+    });
+    return (
+        <group position={position}>
+            <Box ref={rotorRef} args={[0.4, 0.01, 0.04]}>
+                <meshStandardMaterial color={color} emissive={color} emissiveIntensity={2} toneMapped={false} />
+            </Box>
+            <Cylinder args={[0.04, 0.04, 0.08, 8]} position={[0, -0.04, 0]}>
+                <meshStandardMaterial color="#111" />
+            </Cylinder>
+        </group>
+    );
+}
 
 function Drone({ path, color, isMoving, onFinish }) {
     const ref = useRef();
@@ -60,7 +85,8 @@ function Drone({ path, color, isMoving, onFinish }) {
     const speed = 4.0;
     const scale = 1.0;
     const maxBattery = 150;
-
+    
+    // ... totalEnergy and curve same as before ...
     const totalEnergy = React.useMemo(() => {
         if (!path || path.length === 0) return 0;
         let energy = 0;
@@ -78,7 +104,6 @@ function Drone({ path, color, isMoving, onFinish }) {
         return energy;
     }, [path]);
 
-    // Build a continuous curve out of the discrete path points
     const curve = React.useMemo(() => {
         if (!path || path.length === 0) return null;
         const points = path.map(p => new THREE.Vector3(p.col - GRID_COLS/2, p.z + 0.5, p.row - GRID_ROWS/2));
@@ -101,31 +126,22 @@ function Drone({ path, color, isMoving, onFinish }) {
             return;
         }
         
-        // Calculate arc length (actual distance) rather than array indices
         const curveLength = curve.getLength();
-        
-        // Distance traveled this frame
         const distanceToTravel = delta * speed;
-        
-        // Update progress as a percentage of total length (0.0 to 1.0)
         progressRef.current = Math.min(1.0, progressRef.current + (distanceToTravel / curveLength));
         
-        // Get the exact point on the curve at this percentage
         const currentPos = curve.getPointAt(progressRef.current);
         ref.current.position.copy(currentPos);
         
-        // Get tangent to look forward
         if (progressRef.current < 1.0) {
              const lookAtPos = curve.getPointAt(Math.min(1.0, progressRef.current + 0.01));
              ref.current.lookAt(lookAtPos);
         }
 
-        // Add hover effect independently inside the bobRef
         if (bobRef.current) {
             bobRef.current.position.y = Math.sin(state.clock.elapsedTime * 5) * 0.1;
         }
 
-        // Update Battery UI
         if (batteryRef.current) {
             const currentEnergy = Math.max(0, maxBattery - (totalEnergy * progressRef.current));
             const pct = ((currentEnergy / maxBattery) * 100).toFixed(1);
@@ -147,24 +163,41 @@ function Drone({ path, color, isMoving, onFinish }) {
         return null;
     }
 
-    // Pre-calculate line points for a smooth visual trail
     const linePoints = curve.getPoints(Math.max(50, path.length * 5));
 
     return (
         <group>
-            {/* The moving drone container */}
             <group ref={ref} position={[path[0].col - GRID_COLS/2, path[0].z + 0.5, path[0].row - GRID_ROWS/2]}>
-                {/* The bobbing mesh container */}
                 <group ref={bobRef} scale={[scale, scale, scale]}>
-                    <Sphere args={[0.3, 32, 32]}>
-                        <meshBasicMaterial color={color} toneMapped={false} />
-                    </Sphere>
-                    <Sphere args={[0.45, 16, 16]}>
-                        <meshStandardMaterial color={color} transparent opacity={0.3} roughness={0.1} metalness={0.8} />
-                    </Sphere>
-                    <pointLight color={color} intensity={0.5} distance={3} />
                     
-                    {/* Floating Battery UI */}
+                    {/* Drone Model Body */}
+                    <group scale={[0.4, 0.4, 0.4]}>
+                        {/* Central Hub */}
+                        <Box args={[0.6, 0.2, 0.6]}>
+                            <meshStandardMaterial color="#1a1a1a" metalness={0.9} roughness={0.1} />
+                        </Box>
+                        {/* Core Glow */}
+                        <Sphere args={[0.2, 16, 16]} position={[0, 0.15, 0]}>
+                            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={5} toneMapped={false} />
+                        </Sphere>
+
+                        {/* Frame Arms (X-Shape) */}
+                        <Box args={[1.2, 0.06, 0.06]} rotation={[0, Math.PI/4, 0]}>
+                            <meshStandardMaterial color="#333" />
+                        </Box>
+                        <Box args={[1.2, 0.06, 0.06]} rotation={[0, -Math.PI/4, 0]}>
+                            <meshStandardMaterial color="#333" />
+                        </Box>
+
+                        {/* Four Rotors */}
+                        <Rotor position={[0.42, 0.1, 0.42]} color={color} speed={0.8} />
+                        <Rotor position={[-0.42, 0.1, 0.42]} color={color} speed={-0.8} />
+                        <Rotor position={[0.42, 0.1, -0.42]} color={color} speed={-0.8} />
+                        <Rotor position={[-0.42, 0.1, -0.42]} color={color} speed={0.8} />
+                        
+                        <pointLight color={color} intensity={1} distance={5} />
+                    </group>
+
                     <Html position={[0, 1.2, 0]} center style={{ pointerEvents: 'none' }}>
                         <div style={{
                             background: 'rgba(0, 0, 0, 0.7)',
@@ -183,8 +216,6 @@ function Drone({ path, color, isMoving, onFinish }) {
                     </Html>
                 </group>
             </group>
-            
-            {/* The trail line drawn statically in world space, independent of the drone's moving group */}
             <Line
                 points={linePoints}
                 color={color}
@@ -294,6 +325,7 @@ export default class Visualization3D extends Component {
                 isPath: false,
                 isBlocked: false,
                 z: 0
+                // Preserves isRoad and wallHeight by spreading ...node
             }))
         );
         this.setState({ grid, timer: 0, buttonsDisabled: false, droneAnimations: [], isAnimating: false }, () => {
@@ -330,7 +362,7 @@ export default class Visualization3D extends Component {
     }
 
     analyzeFleet() {
-        const { grid, numDeliveries } = this.state;
+        const { grid } = this.state;
         const finishNodes = [];
         for (let r = 0; r < GRID_ROWS; r++) {
             for (let c = 0; c < GRID_COLS; c++) {
@@ -591,7 +623,7 @@ export default class Visualization3D extends Component {
             <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#050510' }}>
                 <div style={{ padding: '15px 20px', background: 'rgba(20, 20, 30, 0.9)', color: 'white', borderBottom: '1px solid #333', zIndex: 10, backdropFilter: 'blur(10px)', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h2 style={{margin: 0, fontSize: '1.5rem', fontWeight: 600, letterSpacing: '2px', color: '#00ffcc', textTransform: 'uppercase'}}>SkyFlow 3D</h2>
+                        <h2 style={{margin: 0, fontSize: '1.5rem', fontWeight: 600, letterSpacing: '2px', color: '#00ffcc', textTransform: 'uppercase'}}>AERO-PATH: 3D UAV Path Planning & Fleet Optimization</h2>
                         <Button variant="outline-info" onClick={() => this.setState({ showWiki: true })}>
                             📖 Project Wiki
                         </Button>
@@ -667,28 +699,29 @@ export default class Visualization3D extends Component {
 
                 <div style={{ flex: 1, position: 'relative' }}>
                     <Canvas camera={{ position: [-15, 25, 35], fov: 45 }} onPointerUp={() => this.setState({ mouseIsPressed: false })}>
-                        <color attach="background" args={['#050510']} />
-                        <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+                        <color attach="background" args={['#080812']} />
+                        <fog attach="fog" args={['#080812', 30, 110]} />
+                        <Stars radius={120} depth={50} count={3000} factor={4} saturation={0} fade speed={0.5} />
                         
-                        <ambientLight intensity={0.4} />
-                        <pointLight position={[0, 50, 0]} intensity={1.0} color="#ffffff" />
-                        <directionalLight position={[20, 20, 20]} intensity={1.5} color="#e0e0ff" />
-                        <directionalLight position={[-20, 10, -20]} intensity={0.8} color="#ffb86c" />
+                        <ambientLight intensity={0.6} />
+                        <pointLight position={[0, 60, 0]} intensity={1.5} color="#ffffff" />
+                        <directionalLight position={[30, 30, 30]} intensity={2.0} color="#c0c0ff" />
+                        <directionalLight position={[-30, 15, -30]} intensity={1.2} color="#ffd8a8" />
                         
                         <OrbitControls 
                             enabled={!this.state.mouseIsPressed}
                             maxPolarAngle={Math.PI / 2 - 0.05}
                             minDistance={10}
-                            maxDistance={100}
+                            maxDistance={120}
                             makeDefault
                         />
 
                         <Grid 
                             position={[0, -0.01, 0]} 
-                            args={[100, 100]} 
-                            cellSize={1} cellThickness={1} cellColor="#333" 
-                            sectionSize={5} sectionThickness={1.5} sectionColor="#666" 
-                            fadeDistance={60} 
+                            args={[120, 120]} 
+                            cellSize={1} cellThickness={1.2} cellColor="#222233" 
+                            sectionSize={6} sectionThickness={2.0} sectionColor="#444466" 
+                            fadeDistance={80} 
                             fadeStrength={1.5} 
                         />
                         
@@ -697,66 +730,79 @@ export default class Visualization3D extends Component {
                                 row.map((node, cIdx) => {
                                     const x = cIdx - GRID_COLS/2;
                                     const z = rIdx - GRID_ROWS/2;
+                                    const height = node.wallHeight || 3;
                                     
                                     if (node.isWall) {
                                         return (
                                             <group key={`${rIdx}-${cIdx}`}>
+                                                {/* Building Body */}
                                                 <Box 
-                                                    position={[x, 1.5, z]} 
-                                                    args={[0.9, 3, 0.9]} 
+                                                    position={[x, height/2, z]} 
+                                                    args={[0.9, height, 0.9]} 
                                                     onPointerDown={(e) => this.handlePointerDown(e, rIdx, cIdx)}
                                                     onPointerOver={(e) => this.handlePointerOver(e, rIdx, cIdx)}
                                                     onPointerUp={() => this.handlePointerUp()}
                                                 >
                                                     <meshStandardMaterial 
-                                                        color="#2c2c3a" 
-                                                        roughness={0.4} 
-                                                        metalness={0.8} 
-                                                        emissive="#111122"
+                                                        color="#2a2a35" 
+                                                        roughness={0.2} 
+                                                        metalness={0.9} 
+                                                        emissive="#0a0a15"
                                                     />
-                                                    <lineSegments>
-                                                        <edgesGeometry attach="geometry" args={[new THREE.BoxGeometry(0.9, 3, 0.9)]} />
-                                                        <lineBasicMaterial attach="material" color="#667" linewidth={1} />
-                                                    </lineSegments>
                                                 </Box>
-                                                {/* Cyberpunk window lights */}
-                                                <Box position={[x, 2.2, z]} args={[0.92, 0.15, 0.92]}>
-                                                    <meshStandardMaterial color="#00ffcc" emissive="#00ffcc" emissiveIntensity={2} toneMapped={false} />
+                                                {/* Rooftop Trim */}
+                                                <Box position={[x, height, z]} args={[0.95, 0.1, 0.95]}>
+                                                    <meshStandardMaterial color="#444466" roughness={0.5} metalness={0.5} />
                                                 </Box>
-                                                <Box position={[x, 1.2, z]} args={[0.92, 0.15, 0.92]}>
-                                                    <meshStandardMaterial color="#ff2975" emissive="#ff2975" emissiveIntensity={2} toneMapped={false} />
-                                                </Box>
+                                                {/* Windows - Staggered glowing boxes */}
+                                                {height > 1.5 && (
+                                                    <>
+                                                        <Box position={[x, height * 0.75, z]} args={[0.92, 0.1, 0.92]}>
+                                                            <meshStandardMaterial color="#00ffcc" emissive="#00ffcc" emissiveIntensity={2.5} toneMapped={false} />
+                                                        </Box>
+                                                        <Box position={[x, height * 0.45, z]} args={[0.92, 0.1, 0.92]}>
+                                                            <meshStandardMaterial color="#ff2975" emissive="#ff2975" emissiveIntensity={2.5} toneMapped={false} />
+                                                        </Box>
+                                                        <Box position={[x, height * 0.15, z]} args={[0.92, 0.1, 0.92]}>
+                                                            <meshStandardMaterial color="#2997ff" emissive="#2997ff" emissiveIntensity={2.5} toneMapped={false} />
+                                                        </Box>
+                                                    </>
+                                                )}
                                             </group>
                                         );
                                     }
 
-                                    let color = "#111";
-                                    let height = 0.05;
+                                    let color = node.isRoad ? "#1a1a24" : "#222233";
+                                    let h = 0.05;
                                     let emissive = "#000";
                                     let emissiveIntensity = 0;
 
                                     if (node.isStart) {
                                         color = "#007bff";
-                                        height = 0.2;
+                                        h = 0.25;
                                         emissive = "#007bff";
-                                        emissiveIntensity = 2;
+                                        emissiveIntensity = 3;
                                     } else if (node.isFinish) {
                                         color = "#28a745";
-                                        height = 0.15;
+                                        h = 0.2;
                                         emissive = "#28a745";
-                                        emissiveIntensity = 1.5;
+                                        emissiveIntensity = 2.5;
                                     } else {
+                                        // Standard tiles for better map readability
                                         return (
                                             <mesh 
                                                 key={`${rIdx}-${cIdx}`} 
-                                                position={[x, 0, z]} 
-                                                rotation={[-Math.PI / 2, 0, 0]} 
+                                                position={[x, -0.05, z]} 
                                                 onPointerDown={(e) => this.handlePointerDown(e, rIdx, cIdx)}
                                                 onPointerOver={(e) => this.handlePointerOver(e, rIdx, cIdx)}
                                                 onPointerUp={() => this.handlePointerUp()}
                                             >
-                                                <planeGeometry args={[1, 1]} />
-                                                <meshBasicMaterial visible={false} />
+                                                <boxGeometry args={[0.95, 0.1, 0.95]} />
+                                                <meshStandardMaterial 
+                                                    color={node.isRoad ? "#151520" : "#222233"} 
+                                                    roughness={0.8}
+                                                    metalness={0.1}
+                                                />
                                             </mesh>
                                         );
                                     }
@@ -764,8 +810,8 @@ export default class Visualization3D extends Component {
                                     return (
                                         <Box 
                                             key={`${rIdx}-${cIdx}`} 
-                                            position={[x, height/2, z]} 
-                                            args={[0.8, height, 0.8]} 
+                                            position={[x, h/2, z]} 
+                                            args={[0.85, h, 0.85]} 
                                             onPointerDown={(e) => this.handlePointerDown(e, rIdx, cIdx)}
                                             onPointerOver={(e) => this.handlePointerOver(e, rIdx, cIdx)}
                                             onPointerUp={() => this.handlePointerUp()}

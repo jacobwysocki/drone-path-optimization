@@ -1,4 +1,4 @@
-# Drone Fleet Pathfinding & Optimization Simulation
+# AERO-PATH: 3D UAV Path Planning & Fleet Optimization
 **Research Focus:** *Implementation of Path Optimization Algorithm for the Optimal Number of Unmanned Aerial Vehicles Used Within Goods Delivery.*
 
 ## The Problem

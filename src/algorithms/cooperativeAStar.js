@@ -91,11 +91,11 @@ export function cooperativeAStar(grid, startNode, finishNode, startTime, reserva
             
             // Check grid bounds
             if (nr >= 0 && nr < grid.length && nc >= 0 && nc < grid[0].length && nz >= 0 && nz <= maxZ) {
-                // If it's a wall on the ground (Z=0), or if the wall is tall (Z<=2)
+                // Use the dynamic wallHeight from the grid node
                 const isWall = grid[nr][nc].isWall;
-                const wallHeight = isWall ? 2 : -1; // Let's say walls are 3 units tall (z=0,1,2)
+                const buildingHeight = isWall ? (grid[nr][nc].wallHeight || 2) : -1;
                 
-                if (nz > wallHeight) {
+                if (nz > buildingHeight) {
                     neighbors.push({ row: nr, col: nc, z: nz });
                 }
             }
