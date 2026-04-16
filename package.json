@@ -2,8 +2,10 @@
   "name": "drone-path-optimization",
   "version": "0.1.0",
   "private": true,
-  "homepage": "http://unn-w19018803.newnumyspace.co.uk/KV6003/dronePathfinding/",
   "dependencies": {
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
+    "@react-three/postprocessing": "^2.19.1",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
@@ -11,7 +13,9 @@
     "react": "^18.2.0",
     "react-bootstrap": "^2.7.4",
     "react-dom": "^18.2.0",
+    "react-markdown": "^10.1.0",
     "react-scripts": "5.0.1",
+    "three": "^0.183.2",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
