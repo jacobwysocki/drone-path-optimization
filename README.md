@@ -1,5 +1,7 @@
 # AERO-PATH — 3D UAV Path Planning & Fleet Optimization
 
+**Live demo:** [jacobwysocki.github.io/drone-path-optimization](https://jacobwysocki.github.io/drone-path-optimization)
+
 A browser-based simulation that investigates a real logistics question: **given a set of drone deliveries, what is the smallest fleet that can complete them safely within battery and payload constraints, and how do we route that fleet without mid-air collisions?** It started as my final-year research project at Northumbria University and I've continued developing it since — the current version is a full 3D rewrite with a cooperative multi-agent pathfinder, swarm routing, and a live simulation terminal.
 
 ## What it does
@@ -49,6 +51,7 @@ Then open [http://localhost:3000](http://localhost:3000). The in-app **📖 Proj
 | `npm start` | Runs the dev server at `localhost:3000`. |
 | `npm test` | Launches the Jest / React Testing Library watcher. |
 | `npm run build` | Produces a minified, hashed production bundle in `build/`. |
+| `npm run deploy` | Builds and publishes the app to GitHub Pages (pushes to the `gh-pages` branch). |
 
 ## Project layout
 
