@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/drone-path-optimization/static/css/main.ac21cb1f.css",
+    "main.js": "/drone-path-optimization/static/js/main.c47e7e45.js",
+    "static/js/787.cd46124c.chunk.js": "/drone-path-optimization/static/js/787.cd46124c.chunk.js",
+    "index.html": "/drone-path-optimization/index.html",
+    "main.ac21cb1f.css.map": "/drone-path-optimization/static/css/main.ac21cb1f.css.map",
+    "main.c47e7e45.js.map": "/drone-path-optimization/static/js/main.c47e7e45.js.map",
+    "787.cd46124c.chunk.js.map": "/drone-path-optimization/static/js/787.cd46124c.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.ac21cb1f.css",
+    "static/js/main.c47e7e45.js"
+  ]
+}
