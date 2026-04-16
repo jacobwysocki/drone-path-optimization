@@ -1,77 +1,72 @@
-# Simulation can be accessed through [Newnumyspace](http://unn-w19018803.newnumyspace.co.uk/KV6003/dronePathfinding/)
+# AERO-PATH — 3D UAV Path Planning & Fleet Optimization
 
-URL: http://unn-w19018803.newnumyspace.co.uk/KV6003/dronePathfinding/
+A browser-based simulation that investigates a real logistics question: **given a set of drone deliveries, what is the smallest fleet that can complete them safely within battery and payload constraints, and how do we route that fleet without mid-air collisions?** It started as my final-year research project at Northumbria University and I've continued developing it since — the current version is a full 3D rewrite with a cooperative multi-agent pathfinder, swarm routing, and a live simulation terminal.
 
-# To run the simulation firstly run the install command  
-### `npm install`
+## What it does
 
-# Getting Started with Create React App
+The user drops delivery targets onto a 3D city grid (roads, skyscrapers of varying heights, paintable obstacles) and picks a fleet size — or asks the app to compute the optimal one from payload and battery limits. The simulation then plans, animates, and narrates the whole mission in a live terminal: clustering deliveries, choosing a visit order, finding collision-free flight paths through 3D airspace, reloading at base when payload runs out, and returning home.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## The algorithmic pipeline
 
-## Available Scripts
+Each mission runs through three stages — chosen deliberately because each solves a different, well-known sub-problem:
 
-In the project directory, you can run:
+1. **Delivery allocation — K-Means clustering.** Groups deliveries spatially so each drone gets a coherent local workload rather than crossing the map.
+2. **Route ordering — Ant Colony Optimization (TSP).** Each drone then asks "in what order should I visit my assigned targets?" — a Travelling Salesperson problem, solved with ACO (pheromone-weighted probabilistic tours over 50 iterations).
+3. **Collision-free navigation — Cooperative A\* (MAPF).** Adds a **time dimension** to the search space and a global `ReservationTable` of (row, col, z, time) tuples. When a second drone plans, it reads the table and will wait in place or climb to a higher altitude rather than fly through a reserved cell. Both vertex and edge reservations are checked, so two drones can't swap positions through each other.
 
-### `npm start`
+Standard A\* and Dijkstra are also implemented as a baseline — they find shorter individual paths but crash drones into each other, which illustrates *why* the MAPF variant exists.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Tech stack
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- **React 18** (class component orchestrator + functional children for animated parts)
+- **Three.js** via **@react-three/fiber** and **@react-three/drei** for the 3D scene graph
+- **@react-three/postprocessing** for bloom/glow effects
+- **React-Bootstrap** for the control panel
+- **Create React App** / webpack as the toolchain
 
-### `npm test`
+All algorithms — Dijkstra, A\*, Cooperative A\* (space-time MAPF with a reservation table), K-Means, and ACO — are implemented from scratch in plain JavaScript in `src/algorithms/`.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## What I think is interesting to look at
 
-### `npm run build`
+- `src/algorithms/cooperativeAStar.js` — the 4D (row, col, z, time) state-space search with vertex + edge reservation checks and asymmetric climb/descend costs (climbing is 2× the cost of flat flight, descending is 0.5×, so drones prefer to route *over* obstacles only when it's actually cheaper than waiting).
+- `src/algorithms/aco.js` — ACO for TSP, roulette-wheel selection with pheromone evaporation.
+- `src/algorithms/allocation.js` — K-Means with centroid recomputation and a convergence check.
+- `src/visualization/Visualization3D.js` — the orchestration layer that ties allocation → routing → pathfinding → animation, including multi-trip logic (a drone whose cluster exceeds payload returns to base to reload mid-mission) and a battery model that drains as the curve is traversed.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Running it locally
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+npm install
+npm start
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Then open [http://localhost:3000](http://localhost:3000). The in-app **📖 Project Wiki** button (or [`WIKI.md`](./WIKI.md)) opens a more detailed algorithmic write-up.
 
-### `npm run eject`
+### Available scripts
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+| Command | What it does |
+| --- | --- |
+| `npm start` | Runs the dev server at `localhost:3000`. |
+| `npm test` | Launches the Jest / React Testing Library watcher. |
+| `npm run build` | Produces a minified, hashed production bundle in `build/`. |
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Project layout
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```
+src/
+├── algorithms/
+│   ├── aStar.js              A* pathfinder (baseline)
+│   ├── dijkstra.js           Dijkstra pathfinder (baseline)
+│   ├── cooperativeAStar.js   Space-time MAPF with a ReservationTable
+│   ├── aco.js                Ant Colony Optimization for TSP routing
+│   ├── allocation.js         K-Means clustering for delivery allocation
+│   └── algorithm.js          Shared grid helpers
+├── visualization/
+│   └── Visualization3D.js    3D scene, control panel, orchestration
+├── wikiContent.js            In-app wiki markdown
+└── App.js                    Entry point
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+**Scope honesty:** single-page app, no backend, no tests beyond CRA's default. It's here to demonstrate how I reason about an algorithmic problem end-to-end: decomposing it into sub-problems, picking the right tool for each, and making the result visible.
