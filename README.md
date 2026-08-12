@@ -1,75 +1,107 @@
 # AERO-PATH — 3D UAV Path Planning & Fleet Optimization
 
-**Live demo:** [jacobwysocki.github.io/drone-path-optimization](https://jacobwysocki.github.io/drone-path-optimization)
+**Live demo:** [jacobwysocki.github.io/drone-path-optimization](https://jacobwysocki.github.io/drone-path-optimization/)
 
-A browser-based simulation that investigates a real logistics question: **given a set of drone deliveries, what is the smallest fleet that can complete them safely within battery and payload constraints, and how do we route that fleet without mid-air collisions?** It started as my final-year research project at Northumbria University and I've continued developing it since — the current version is a full 3D rewrite with a cooperative multi-agent pathfinder, swarm routing, and a live simulation terminal.
+AERO-PATH is a browser-based simulation for exploring delivery allocation, route ordering, and collision-aware drone movement in a shared 3D grid. It is a research and visualization tool, not a certified flight planner.
 
-## What it does
+## How a mission is planned
 
-The user drops delivery targets onto a 3D city grid (roads, skyscrapers of varying heights, paintable obstacles) and picks a fleet size — or asks the app to compute the optimal one from payload and battery limits. The simulation then plans, animates, and narrates the whole mission in a live terminal: clustering deliveries, choosing a visit order, finding collision-free flight paths through 3D airspace, reloading at base when payload runs out, and returning home.
+1. **Allocate deliveries.** `allocateDeliveries` uses deterministic K-Means-style clustering. It seeds the first centroid from the first delivery, chooses subsequent farthest points with stable tie-breaking, repairs empty clusters, and stops when assignments stabilize or after 100 iterations.
+2. **Order each cluster.** Optional Ant Colony Optimization uses 15 ants over 50 iterations by default. The algorithm API defaults to `Math.random` and remains stochastic unless its caller injects another random source. The UI injects a seeded random source, so the ACO result is reproducible for the same fixed mission inputs and settings. Its payload-aware objective inserts depot returns after capacity-sized batches, and the caller's delivery order is retained as a no-regression incumbent. The result remains a heuristic, not a proof of optimality.
+3. **Plan each leg.** Dijkstra and A* provide single-agent ground-path baselines. Cooperative A* searches `(row, col, z, time)` states and gives later-planned drones the reservations made by earlier-planned drones.
+4. **Animate the timed route.** The renderer interpolates linearly between consecutive timestamped waypoints at four simulation ticks per real second. Identical consecutive positions represent waiting; there is no spline or constant-distance-speed model.
 
-## The algorithmic pipeline
+### Cooperative A* timing and reservations
 
-Each mission runs through three stages — chosen deliberately because each solves a different, well-known sub-problem:
+Every wait, horizontal move, climb, or descent advances exactly one integer tick. Search cost is separate from duration: waiting and horizontal flight cost `1`, climbing costs `2`, and descending costs `0.5`. A reserved vertex blocks occupancy at its tick. A directed edge is reserved at the departure tick, and a candidate move checks the reverse directed edge to prevent head-on swaps.
 
-1. **Delivery allocation — K-Means clustering.** Groups deliveries spatially so each drone gets a coherent local workload rather than crossing the map.
-2. **Route ordering — Ant Colony Optimization (TSP).** Each drone then asks "in what order should I visit my assigned targets?" — a Travelling Salesperson problem, solved with ACO (pheromone-weighted probabilistic tours over 50 iterations).
-3. **Collision-free navigation — Cooperative A\* (MAPF).** Adds a **time dimension** to the search space and a global `ReservationTable` of (row, col, z, time) tuples. When a second drone plans, it reads the table and will wait in place or climb to a higher altitude rather than fly through a reserved cell. Both vertex and edge reservations are checked, so two drones can't swap positions through each other.
+The UI plans drones sequentially, staggers depot launch attempts by two ticks, and reserves each completed route before planning the next drone. This is prioritized Cooperative A*, not a complete or globally optimal multi-agent path-finding solver; a valid joint solution can exist even when the chosen priority order cannot find one.
 
-Standard A\* and Dijkstra are also implemented as a baseline — they find shorter individual paths but crash drones into each other, which illustrates *why* the MAPF variant exists.
+### Fleet recommendation
 
-## Tech stack
+The UI's **Auto-Optimize** action is a sizing heuristic, not a minimum-fleet guarantee. It takes the larger of:
 
-- **React 18** (class component orchestrator + functional children for animated parts)
-- **Three.js** via **@react-three/fiber** and **@react-three/drei** for the 3D scene graph
-- **@react-three/postprocessing** for bloom/glow effects
-- **React-Bootstrap** for the control panel
-- **Create React App** / webpack as the toolchain
+- a nearest-neighbor Manhattan round-trip estimate divided by the nominal 150-unit battery range; and
+- delivery count divided by payload capacity.
 
-All algorithms — Dijkstra, A\*, Cooperative A\* (space-time MAPF with a reservation table), K-Means, and ACO — are implemented from scratch in plain JavaScript in `src/algorithms/`.
+The result is clamped to the UI's supported range of 1–7 drones. It does not solve routes first or account for obstacles, altitude energy, waits, reservation priority, or the ACO route-order objective. The battery display reports modeled route energy, but the planner does not reject a route whose modeled energy exceeds 150 units.
 
-## What I think is interesting to look at
+## Technology
 
-- `src/algorithms/cooperativeAStar.js` — the 4D (row, col, z, time) state-space search with vertex + edge reservation checks and asymmetric climb/descend costs (climbing is 2× the cost of flat flight, descending is 0.5×, so drones prefer to route *over* obstacles only when it's actually cheaper than waiting).
-- `src/algorithms/aco.js` — ACO for TSP, roulette-wheel selection with pheromone evaporation.
-- `src/algorithms/allocation.js` — K-Means with centroid recomputation and a convergence check.
-- `src/visualization/Visualization3D.js` — the orchestration layer that ties allocation → routing → pathfinding → animation, including multi-trip logic (a drone whose cluster exceeds payload returns to base to reload mid-mission) and a battery model that drains as the curve is traversed.
+- Node.js 24 and npm 11
+- React 19 and React DOM 19
+- Vite 8 with its OXC-backed React plugin
+- Three.js with React Three Fiber, Drei, and React Three Postprocessing
+- Vitest 4, jsdom, and Testing Library
+- ESLint 9 flat configuration
 
-## Running it locally
+## Local development
+
+Use the Node release in [`.nvmrc`](./.nvmrc). For a reproducible install:
 
 ```bash
-npm install
+nvm use
+npm ci
 npm start
 ```
 
-Then open [http://localhost:3000](http://localhost:3000). The in-app **📖 Project Wiki** button (or [`WIKI.md`](./WIKI.md)) opens a more detailed algorithmic write-up.
+The Vite development server defaults to [http://localhost:5173](http://localhost:5173). `npm run dev` is an alternative to `npm start`.
 
-### Available scripts
+## Scripts
 
-| Command | What it does |
+| Command | Purpose |
 | --- | --- |
-| `npm start` | Runs the dev server at `localhost:3000`. |
-| `npm test` | Launches the Jest / React Testing Library watcher. |
-| `npm run build` | Produces a minified, hashed production bundle in `build/`. |
-| `npm run deploy` | Builds and publishes the app to GitHub Pages (pushes to the `gh-pages` branch). |
+| `npm start` | Start the Vite development server. |
+| `npm run dev` | Start the Vite development server. |
+| `npm run build` | Create the production site in `dist/` with the `/drone-path-optimization/` base path. |
+| `npm run preview` | Serve the production build locally. |
+| `npm test` | Run all Vitest suites once. |
+| `npm run test:watch` | Run Vitest in watch mode. |
+| `npm run lint` | Lint maintained JavaScript and JSX. |
+| `npm run check` | Run lint, tests, and the production build. |
+| `npm run predeploy` | Run the complete local quality gate; npm invokes it automatically before `deploy`. |
+| `npm run deploy` | After `predeploy`, use an authenticated GitHub CLI to dispatch `pages.yml` from `main`. This changes remote state. |
 
-## Project layout
+## Testing
 
-```
+The test suite covers priority-queue behavior; A* and Dijkstra success, failure, and boundary cases; deterministic allocation; ACO validation, injected seeded behavior, payload-aware scoring, and its no-regression incumbent; and Cooperative A* timing, reservations, conflicts, waits, costs, long horizons, and unreachable targets. WebGL-free application and visualization-orchestration tests cover mounting, reset behavior, failure recovery, consecutive runs, reload reservations, and the UI's seeded payload-aware ACO wiring.
+
+The UI coverage also protects terminal logging across React Strict Mode's development remount. These tests deliberately do not instantiate `Canvas` or require a GPU. Browser/WebGL interaction and rendered-scene behavior remain separate integration concerns.
+
+## Deployment and CI
+
+`.github/workflows/ci.yml` runs a clean `npm ci`, lint, all tests, and a production build for pushes and pull requests. `.github/workflows/pages.yml` repeats the complete check on `main`, uploads `dist/` as a GitHub Pages artifact, and deploys it with Pages' scoped token permissions. Manual dispatch is accepted only when the selected ref is `main`.
+
+For GitHub Pages, configure **Settings → Pages → Source** to **GitHub Actions**. The `homepage`, Vite `base`, manifest scope/start URL, and HTML metadata all target `/drone-path-optimization/`.
+
+`npm run deploy` is a convenience dispatcher for that same Actions workflow; it does not publish a deployment branch. It requires the [GitHub CLI](https://cli.github.com/) to be installed and authenticated for this repository (`gh auth status`) with permission to run Actions workflows.
+
+The production build separates React and the Three/R3F stack into named vendor cache groups. The Three/WebGL group remains intentionally visible as a large initial dependency rather than suppressing Vite's size warning.
+
+## Repository layout
+
+```text
+index.html                         Vite HTML entry and product metadata
+public/
+├── drone-icon.png                 Shared app icon
+└── manifest.json                  Install metadata for the Pages subpath
 src/
 ├── algorithms/
-│   ├── aStar.js              A* pathfinder (baseline)
-│   ├── dijkstra.js           Dijkstra pathfinder (baseline)
-│   ├── cooperativeAStar.js   Space-time MAPF with a ReservationTable
-│   ├── aco.js                Ant Colony Optimization for TSP routing
-│   ├── allocation.js         K-Means clustering for delivery allocation
-│   └── algorithm.js          Shared grid helpers
+│   ├── aStar.js                   Single-agent A* baseline
+│   ├── dijkstra.js                Single-agent Dijkstra baseline
+│   ├── cooperativeAStar.js        Timed Cooperative A* and ReservationTable
+│   ├── priorityQueue.js           Shared binary min-priority queue
+│   ├── aco.js                     ACO delivery-order heuristic
+│   ├── allocation.js              Deterministic delivery clustering
+│   ├── algorithm.js               Shared grid helpers
+│   └── *.test.js                  Algorithm-focused Vitest suites
 ├── visualization/
-│   └── Visualization3D.js    3D scene, control panel, orchestration
-├── wikiContent.js            In-app wiki markdown
-└── App.js                    Entry point
+│   ├── Visualization3D.jsx        Scene, controls, planning orchestration, animation
+│   └── visualization.css          Visualization and control styling
+├── App.jsx                        Application shell
+├── App.test.jsx                   WebGL-free application smoke test
+├── index.jsx                      React entry point
+└── wikiContent.js                 Raw import of the canonical `WIKI.md`
 ```
 
----
-
-**Scope honesty:** single-page app, no backend, no tests beyond CRA's default. It's here to demonstrate how I reason about an algorithmic problem end-to-end: decomposing it into sub-problems, picking the right tool for each, and making the result visible.
+See [WIKI.md](./WIKI.md) or open **Project Wiki** in the application for the detailed model description.
