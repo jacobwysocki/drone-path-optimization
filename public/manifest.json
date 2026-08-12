@@ -1,25 +1,19 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "id": "/drone-path-optimization/",
+  "short_name": "AERO-PATH",
+  "name": "AERO-PATH — 3D UAV Path Planning",
+  "description": "Interactive drone fleet allocation and cooperative space-time path-planning simulation.",
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "logo192.png",
+      "src": "drone-icon.png",
       "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "logo512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "1200x1200",
+      "purpose": "any"
     }
   ],
-  "start_url": ".",
+  "start_url": "/drone-path-optimization/",
+  "scope": "/drone-path-optimization/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#09090f",
+  "background_color": "#09090f"
 }
