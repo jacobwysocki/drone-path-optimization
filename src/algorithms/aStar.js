@@ -80,6 +80,6 @@ function manhattan(a, b) {
     return Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
 }
 
-export function getNodesInShortestPathOrderaStar(startNode, finishNode) {
+export function getNodesInShortestPathOrderAStar(startNode, finishNode) {
     return reconstructShortestPath(startNode, finishNode);
 }

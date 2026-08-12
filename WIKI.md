@@ -104,6 +104,6 @@ npm run check
 
 `check` runs ESLint, all Vitest suites, and the Vite production build. `npm start` and `npm run dev` run the development server; `npm run preview` serves `dist/` locally.
 
-GitHub Actions runs the same install/lint/test/build gate for changes. A separate workflow deploys the verified `dist/` artifact from `main` through GitHub Pages. Vite and the web manifest use `/drone-path-optimization/` as the deployment base.
+GitHub Actions runs the same install/lint/test/build gate for changes. A separate, manually dispatched workflow deploys the verified `dist/` artifact from `main` through GitHub Pages; merging a pull request does not deploy production automatically. Vite and the web manifest use `/drone-path-optimization/` as the deployment base.
 
 `npm run deploy` first runs the automatic `predeploy` quality gate, then dispatches that same `pages.yml` workflow with the `main` ref; it does not publish a deployment branch. The command requires the GitHub CLI to be installed and authenticated for this repository (`gh auth status`) with permission to run Actions workflows.

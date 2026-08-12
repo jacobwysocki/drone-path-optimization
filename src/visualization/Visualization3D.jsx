@@ -5,7 +5,7 @@ import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 
 import { dijkstra, getNodesInShortestPathOrder } from '../algorithms/dijkstra';
-import { aStar, getNodesInShortestPathOrderaStar } from '../algorithms/aStar';
+import { aStar, getNodesInShortestPathOrderAStar } from '../algorithms/aStar';
 import { cooperativeAStar, ReservationTable } from '../algorithms/cooperativeAStar';
 import { allocateDeliveries } from '../algorithms/allocation';
 import { optimizeRouteWithACO } from '../algorithms/aco';
@@ -1044,7 +1044,7 @@ export default class Visualization3D extends Component {
 
         const rawPath = algorithm === 'dijkstra'
             ? getNodesInShortestPathOrder(startNode, finishNode)
-            : getNodesInShortestPathOrderaStar(startNode, finishNode);
+            : getNodesInShortestPathOrderAStar(startNode, finishNode);
 
         if (!rawPath || rawPath.length === 0 || rawPath[0] !== startNode || rawPath[rawPath.length - 1] !== finishNode) {
             return null;

@@ -70,7 +70,7 @@ The UI coverage also protects terminal logging across React Strict Mode's develo
 
 ## Deployment and CI
 
-`.github/workflows/ci.yml` runs a clean `npm ci`, lint, all tests, and a production build for pushes and pull requests. `.github/workflows/pages.yml` repeats the complete check on `main`, uploads `dist/` as a GitHub Pages artifact, and deploys it with Pages' scoped token permissions. Manual dispatch is accepted only when the selected ref is `main`.
+`.github/workflows/ci.yml` runs a clean `npm ci`, lint, all tests, and a production build for pushes and pull requests. `.github/workflows/pages.yml` is deliberately manual: when dispatched against `main`, it repeats the complete check, uploads `dist/` as a GitHub Pages artifact, and deploys it with Pages' scoped token permissions. Merging a pull request does not automatically deploy production.
 
 For GitHub Pages, configure **Settings → Pages → Source** to **GitHub Actions**. The `homepage`, Vite `base`, manifest scope/start URL, and HTML metadata all target `/drone-path-optimization/`.
 

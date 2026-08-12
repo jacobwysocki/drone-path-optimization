@@ -1,5 +1,7 @@
 /** @vitest-environment jsdom */
 
+import { StrictMode } from 'react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const orchestrationSpies = vi.hoisted(() => ({
@@ -137,24 +139,29 @@ describe('Visualization3D orchestration', () => {
   });
 
   afterEach(() => {
+    cleanup();
     while (mountedHarnesses.length > 0) {
       mountedHarnesses.pop().componentWillUnmount();
     }
     vi.restoreAllMocks();
   });
 
-  it('continues logging after a Strict Mode development remount', () => {
-    const visualization = createHarness();
-
-    visualization.componentWillUnmount();
-    visualization.componentDidMount();
-    visualization.addLog('Logging remains active after remount.');
-
-    expect(visualization.state.logs).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining('Logging remains active after remount.'),
-      ]),
+  it('renders terminal updates after a Strict Mode development remount', () => {
+    render(
+      <StrictMode>
+        <Visualization3D />
+      </StrictMode>,
     );
+
+    const terminal = screen.getByRole('log');
+    expect(terminal).toHaveTextContent('System initialized. 3D map rendered.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset Paths' }));
+    expect(terminal).toHaveTextContent('Paths cleared. Obstacles and deliveries retained.');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Run Standard A*' }));
+    expect(terminal).toHaveTextContent('Starting Fleet Optimization');
+    expect(terminal).toHaveTextContent('Algorithm: ASTAR');
   });
 
   it('regenerates the configured number of deliveries on a full reset', () => {

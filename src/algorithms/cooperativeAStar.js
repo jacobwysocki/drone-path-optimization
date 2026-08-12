@@ -1,4 +1,5 @@
 import { MinPriorityQueue } from './priorityQueue';
+import { isRectangularGrid } from './algorithm';
 
 const DEFAULT_MAX_Z = 15;
 const ENERGY_COST = Object.freeze({
@@ -461,16 +462,6 @@ function normalizePoint(node, time) {
     };
     if (time !== undefined) point.time = time;
     return point;
-}
-
-function isRectangularGrid(grid) {
-    return (
-        Array.isArray(grid) &&
-        grid.length > 0 &&
-        Array.isArray(grid[0]) &&
-        grid[0].length > 0 &&
-        grid.every(row => Array.isArray(row) && row.length === grid[0].length)
-    );
 }
 
 function isGridCoordinate(node, grid) {

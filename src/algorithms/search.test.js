@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { aStar, getNodesInShortestPathOrderaStar } from './aStar';
+import { aStar, getNodesInShortestPathOrderAStar } from './aStar';
 import { dijkstra, getNodesInShortestPathOrder } from './dijkstra';
 
 const searches = [
-    ['A*', aStar, getNodesInShortestPathOrderaStar],
+    ['A*', aStar, getNodesInShortestPathOrderAStar],
     ['Dijkstra', dijkstra, getNodesInShortestPathOrder]
 ];
 

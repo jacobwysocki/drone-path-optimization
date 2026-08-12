@@ -52,7 +52,7 @@ Every lane used `gpt-5.6-sol` with `model_reasoning_effort="max"`.
 - Migrated the project from CRA/Jest to Vite/Vitest and renamed JSX entry files accordingly.
 - Removed dead scaffold assets, tracked IDE metadata, obsolete components, and unused dependencies.
 - Added lint, test, build, preview, and consolidated `npm run check` commands.
-- Added CI and GitHub Pages workflows with immutable action commit pins.
+- Added CI and a manually dispatched GitHub Pages workflow with immutable action commit pins.
 - Added weekly Dependabot checks for npm and GitHub Actions.
 - Made `npm run deploy` run the full quality gate before dispatching the Pages workflow.
 - Updated the README, Wiki, manifest, and project description to match the delivered architecture and its limits.
@@ -76,4 +76,4 @@ Every lane used `gpt-5.6-sol` with `model_reasoning_effort="max"`.
 - Fleet sizing remains a recommendation heuristic, and battery is reported rather than enforced as a hard route-feasibility constraint.
 - Three.js remains the dominant bundle: the Three vendor chunk is about 1.01 MB minified / 269.25 kB gzip, so Vite still emits a large-chunk warning. The browser also reports a `THREE.Clock` deprecation originating in the current rendering dependency stack.
 - Algorithm and orchestration behavior is automated in CI, but the WebGL browser smoke pass is currently manual rather than an end-to-end CI job.
-- No commit, push, Pages deployment, or other remote mutation was performed as part of this audit.
+- No production deployment was performed as part of this audit.
