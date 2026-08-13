@@ -1,37 +1,71 @@
-import { getAllNodes, getUnvisitedNeighbors, updateUnvisitedNeighbors } from './algorithm';
+import {
+    getGridNode,
+    getUnvisitedNeighbors,
+    isTraversable,
+    prepareGridForSearch,
+    reconstructShortestPath,
+    sameGridPosition,
+    synchronizeSearchNode,
+    updateUnvisitedNeighbors
+} from './algorithm';
+import { MinPriorityQueue } from './priorityQueue';
 
 export function dijkstra(grid, startNode, finishNode) {
     const visitedNodesInOrder = [];
-    startNode.distance = 0;
-    const unvisitedNodes = getAllNodes(grid);
+    prepareGridForSearch(grid);
 
-    while (unvisitedNodes.length) {
-        sortNodesByDistance(unvisitedNodes);
-        const closestNode = unvisitedNodes.shift();
-        if (closestNode.isWall || closestNode.isBlocked) continue;
-        if (closestNode.distance === Infinity) return visitedNodesInOrder;
+    const canonicalStart = getGridNode(grid, startNode);
+    const canonicalFinish = getGridNode(grid, finishNode);
+    if (!canonicalStart || !canonicalFinish) return visitedNodesInOrder;
+    synchronizeSearchNode(finishNode, canonicalFinish);
+
+    canonicalStart.distance = 0;
+
+    if (sameGridPosition(canonicalStart, canonicalFinish)) {
+        canonicalStart.isVisited = true;
+        visitedNodesInOrder.push(canonicalStart);
+        synchronizeSearchNode(finishNode, canonicalFinish);
+        return visitedNodesInOrder;
+    }
+
+    if (!isTraversable(canonicalStart) || !isTraversable(canonicalFinish)) {
+        return visitedNodesInOrder;
+    }
+
+    let sequence = 0;
+    const unvisitedNodes = new MinPriorityQueue((a, b) => (
+        a.distance - b.distance || a.sequence - b.sequence
+    ));
+    unvisitedNodes.push({ node: canonicalStart, distance: 0, sequence: sequence++ });
+
+    while (!unvisitedNodes.isEmpty()) {
+        const entry = unvisitedNodes.pop();
+        const closestNode = entry.node;
+
+        if (closestNode.isVisited || entry.distance !== closestNode.distance) continue;
 
         closestNode.isVisited = true;
         visitedNodesInOrder.push(closestNode);
-        if (closestNode === finishNode) return visitedNodesInOrder;
-        updateUnvisitedNeighbors(closestNode, grid);
+        if (sameGridPosition(closestNode, canonicalFinish)) {
+            synchronizeSearchNode(finishNode, canonicalFinish);
+            return visitedNodesInOrder;
+        }
+
+        const updatedNeighbors = updateUnvisitedNeighbors(closestNode, grid);
+        for (const neighbor of updatedNeighbors) {
+            unvisitedNodes.push({
+                node: neighbor,
+                distance: neighbor.distance,
+                sequence: sequence++
+            });
+        }
     }
+
     return visitedNodesInOrder;
 }
 
-function sortNodesByDistance(unvisitedNodes) {
-    unvisitedNodes.sort((a, b) => a.distance - b.distance);
-}
-
 export function getNodesInShortestPathOrder(startNode, finishNode) {
-    const nodesInShortestPathOrder = [];
-    let currentNode = finishNode;
-    while (currentNode !== null) {
-        currentNode.isPath = true;
-        nodesInShortestPathOrder.unshift(currentNode);
-        currentNode = currentNode.previousNode;
-    }
-    return nodesInShortestPathOrder;
+    return reconstructShortestPath(startNode, finishNode);
 }
 
 export { getUnvisitedNeighbors };

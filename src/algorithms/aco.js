@@ -1,117 +1,242 @@
-// Ant Colony Optimization for solving the Traveling Salesperson Problem (routing order)
-// This algorithm determines the optimal sequence of deliveries for a drone.
+const DEFAULT_OPTIONS = Object.freeze({
+    numAnts: 15,
+    alpha: 1,
+    beta: 2,
+    evaporationRate: 0.5,
+    iterations: 50,
+    pheromoneDeposit: 100,
+    epsilon: 1e-9,
+    payloadLimit: Infinity,
+    random: Math.random
+});
 
-export function optimizeRouteWithACO(startNode, destinations) {
-    if (!destinations || destinations.length <= 1) return destinations;
+export function optimizeRouteWithACO(startNode, destinations, optionsOrRandom = {}) {
+    validateNode(startNode, 'startNode');
+    if (!Array.isArray(destinations)) {
+        throw new TypeError('destinations must be an array.');
+    }
+
+    destinations.forEach((node, index) => validateNode(node, `destinations[${index}]`));
+    const options = normalizeOptions(optionsOrRandom);
+    if (destinations.length <= 1) return [...destinations];
 
     const allNodes = [startNode, ...destinations];
     const numNodes = allNodes.length;
-    
-    // Parameters for ACO
-    const numAnts = 15;
-    const alpha = 1.0; // Pheromone importance
-    const beta = 2.0;  // Distance importance (heuristic)
-    const evaporationRate = 0.5;
-    const iterations = 50;
-    const Q = 100; // Pheromone deposit factor
+    const distances = createDistanceMatrix(allNodes);
+    const pheromones = Array.from(
+        { length: numNodes },
+        () => Array(numNodes).fill(1)
+    );
 
-    // Initialize distances and pheromones
-    const distances = Array.from({ length: numNodes }, () => Array(numNodes).fill(0));
-    const pheromones = Array.from({ length: numNodes }, () => Array(numNodes).fill(1)); // Initial pheromone is 1
+    let bestPath = Array.from({ length: numNodes }, (_, index) => index);
+    let bestPathLength = multiTripTourLength(
+        bestPath,
+        distances,
+        options.payloadLimit
+    );
 
-    for (let i = 0; i < numNodes; i++) {
-        for (let j = 0; j < numNodes; j++) {
-            if (i !== j) {
-                // Euclidean distance for heuristic
-                const dist = Math.sqrt(Math.pow(allNodes[i].row - allNodes[j].row, 2) + Math.pow(allNodes[i].col - allNodes[j].col, 2));
-                distances[i][j] = dist;
-            }
-        }
-    }
+    for (let iteration = 0; iteration < options.iterations; iteration++) {
+        const antTours = [];
 
-    let bestPath = null;
-    let bestPathLength = Infinity;
+        for (let ant = 0; ant < options.numAnts; ant++) {
+            const path = buildTour(distances, pheromones, options);
+            const length = multiTripTourLength(path, distances, options.payloadLimit);
+            antTours.push({ path, length });
 
-    for (let iter = 0; iter < iterations; iter++) {
-        const allAntPaths = [];
-        const allAntLengths = [];
-
-        for (let ant = 0; ant < numAnts; ant++) {
-            const visited = new Set([0]); // Start at index 0 (startNode)
-            const path = [0];
-            let pathLength = 0;
-            let currentNode = 0;
-
-            while (visited.size < numNodes) {
-                const probabilities = [];
-                let probabilitiesSum = 0;
-
-                for (let i = 0; i < numNodes; i++) {
-                    if (!visited.has(i)) {
-                        const tau = Math.pow(pheromones[currentNode][i], alpha);
-                        const eta = Math.pow(1.0 / distances[currentNode][i], beta);
-                        const prob = tau * eta;
-                        probabilities.push({ node: i, prob: prob });
-                        probabilitiesSum += prob;
-                    }
-                }
-
-                // Roulette wheel selection
-                let randomValue = Math.random() * probabilitiesSum;
-                let nextNode = -1;
-                for (const p of probabilities) {
-                    randomValue -= p.prob;
-                    if (randomValue <= 0) {
-                        nextNode = p.node;
-                        break;
-                    }
-                }
-                
-                // Fallback in case of precision issues
-                if (nextNode === -1) nextNode = probabilities[probabilities.length - 1].node;
-
-                path.push(nextNode);
-                visited.add(nextNode);
-                pathLength += distances[currentNode][nextNode];
-                currentNode = nextNode;
-            }
-
-            allAntPaths.push(path);
-            allAntLengths.push(pathLength);
-
-            if (pathLength < bestPathLength) {
-                bestPathLength = pathLength;
+            if (
+                length < bestPathLength ||
+                (length === bestPathLength && lexicographicallyLess(path, bestPath))
+            ) {
+                bestPathLength = length;
                 bestPath = [...path];
             }
         }
 
-        // Pheromone evaporation
-        for (let i = 0; i < numNodes; i++) {
-            for (let j = 0; j < numNodes; j++) {
-                pheromones[i][j] *= (1.0 - evaporationRate);
-            }
-        }
-
-        // Pheromone deposit
-        for (let a = 0; a < numAnts; a++) {
-            const path = allAntPaths[a];
-            const length = allAntLengths[a];
-            const deposit = Q / length;
-
-            for (let i = 0; i < path.length - 1; i++) {
-                const from = path[i];
-                const to = path[i + 1];
-                pheromones[from][to] += deposit;
-                pheromones[to][from] += deposit; // Assuming symmetric distances
-            }
-        }
+        evaporatePheromones(pheromones, options.evaporationRate, options.epsilon);
+        depositPheromones(pheromones, antTours, options);
     }
 
-    // Convert bestPath indices back to destination nodes (excluding the start node at index 0)
-    const optimizedDestinations = [];
-    for (let i = 1; i < bestPath.length; i++) { // Skip index 0 (startNode)
-        optimizedDestinations.push(allNodes[bestPath[i]]);
+    if (!bestPath) {
+        return [...destinations];
     }
 
-    return optimizedDestinations;
+    return bestPath.slice(1).map(index => allNodes[index]);
+}
+
+function normalizeOptions(optionsOrRandom) {
+    const supplied = typeof optionsOrRandom === 'function'
+        ? { random: optionsOrRandom }
+        : optionsOrRandom;
+
+    if (!supplied || typeof supplied !== 'object') {
+        throw new TypeError('ACO options must be an object or random function.');
+    }
+
+    const options = { ...DEFAULT_OPTIONS, ...supplied };
+    validatePositiveInteger(options.numAnts, 'numAnts');
+    validatePositiveInteger(options.iterations, 'iterations');
+    validatePositiveNumber(options.alpha, 'alpha', true);
+    validatePositiveNumber(options.beta, 'beta', true);
+    validatePositiveNumber(options.pheromoneDeposit, 'pheromoneDeposit');
+    validatePositiveNumber(options.epsilon, 'epsilon');
+    validatePayloadLimit(options.payloadLimit);
+
+    if (
+        !Number.isFinite(options.evaporationRate) ||
+        options.evaporationRate < 0 ||
+        options.evaporationRate >= 1
+    ) {
+        throw new RangeError('evaporationRate must be in [0, 1).');
+    }
+
+    if (typeof options.random !== 'function') {
+        throw new TypeError('random must be a function.');
+    }
+
+    return options;
+}
+
+function createDistanceMatrix(nodes) {
+    return nodes.map(from => nodes.map(to => Math.hypot(
+        from.row - to.row,
+        from.col - to.col
+    )));
+}
+
+function buildTour(distances, pheromones, options) {
+    const visited = new Set([0]);
+    const path = [0];
+
+    while (visited.size < distances.length) {
+        const deliveriesChosen = path.length - 1;
+        const currentNode = (
+            deliveriesChosen > 0 &&
+            deliveriesChosen % options.payloadLimit === 0
+        ) ? 0 : path[path.length - 1];
+        const candidates = [];
+        let totalWeight = 0;
+
+        for (let index = 1; index < distances.length; index++) {
+            if (visited.has(index)) continue;
+
+            const safeDistance = Math.max(distances[currentNode][index], options.epsilon);
+            const weight = (
+                Math.pow(Math.max(pheromones[currentNode][index], options.epsilon), options.alpha) *
+                Math.pow(1 / safeDistance, options.beta)
+            );
+
+            const safeWeight = Number.isFinite(weight) && weight > 0 ? weight : 0;
+            candidates.push({ index, weight: safeWeight });
+            totalWeight += safeWeight;
+        }
+
+        const nextNode = selectCandidate(candidates, totalWeight, options.random);
+        path.push(nextNode);
+        visited.add(nextNode);
+    }
+
+    return path;
+}
+
+function selectCandidate(candidates, totalWeight, random) {
+    if (candidates.length === 0) {
+        throw new Error('ACO could not select an unvisited destination.');
+    }
+
+    if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
+        return candidates[0].index;
+    }
+
+    const randomValue = random();
+    const normalizedRandom = Number.isFinite(randomValue)
+        ? Math.min(Math.max(randomValue, 0), 1 - Number.EPSILON)
+        : 0;
+    let threshold = normalizedRandom * totalWeight;
+
+    for (const candidate of candidates) {
+        threshold -= candidate.weight;
+        if (threshold <= 0) return candidate.index;
+    }
+
+    return candidates[candidates.length - 1].index;
+}
+
+function multiTripTourLength(path, distances, payloadLimit) {
+    let length = 0;
+    forEachTripEdge(path, payloadLimit, (from, to) => {
+        length += distances[from][to];
+    });
+    return length;
+}
+
+function evaporatePheromones(pheromones, evaporationRate, epsilon) {
+    for (let i = 0; i < pheromones.length; i++) {
+        for (let j = 0; j < pheromones.length; j++) {
+            pheromones[i][j] = Math.max(
+                epsilon,
+                pheromones[i][j] * (1 - evaporationRate)
+            );
+        }
+    }
+}
+
+function depositPheromones(pheromones, antTours, options) {
+    for (const { path, length } of antTours) {
+        const deposit = options.pheromoneDeposit / Math.max(length, options.epsilon);
+
+        forEachTripEdge(path, options.payloadLimit, (from, to) => {
+            pheromones[from][to] += deposit;
+            pheromones[to][from] += deposit;
+        });
+    }
+}
+
+function forEachTripEdge(path, payloadLimit, visit) {
+    let previous = 0;
+    let deliveriesInBatch = 0;
+
+    for (let index = 1; index < path.length; index++) {
+        const destination = path[index];
+        visit(previous, destination);
+        previous = destination;
+        deliveriesInBatch++;
+
+        if (deliveriesInBatch === payloadLimit || index === path.length - 1) {
+            visit(previous, 0);
+            previous = 0;
+            deliveriesInBatch = 0;
+        }
+    }
+}
+
+function lexicographicallyLess(path, incumbent) {
+    if (!incumbent) return true;
+    for (let i = 0; i < path.length; i++) {
+        if (path[i] !== incumbent[i]) return path[i] < incumbent[i];
+    }
+    return false;
+}
+
+function validateNode(node, label) {
+    if (!node || !Number.isFinite(node.row) || !Number.isFinite(node.col)) {
+        throw new TypeError(`${label} must have finite row and col coordinates.`);
+    }
+}
+
+function validatePositiveInteger(value, label) {
+    if (!Number.isInteger(value) || value <= 0) {
+        throw new RangeError(`${label} must be a positive integer.`);
+    }
+}
+
+function validatePayloadLimit(value) {
+    if (value !== Infinity && (!Number.isInteger(value) || value <= 0)) {
+        throw new RangeError('payloadLimit must be a positive integer or Infinity.');
+    }
+}
+
+function validatePositiveNumber(value, label, allowZero = false) {
+    if (!Number.isFinite(value) || value < 0 || (!allowZero && value === 0)) {
+        throw new RangeError(`${label} must be ${allowZero ? 'non-negative' : 'positive'}.`);
+    }
 }

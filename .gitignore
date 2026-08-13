@@ -10,6 +10,11 @@
 
 # production
 /build
+/dist
+
+# tooling
+/.idea
+/.vite
 
 # misc
 .DS_Store
